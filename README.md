@@ -44,13 +44,18 @@ An analysis ask becomes a written project, not a chat answer:
 - **Analysis hands off to implementation.** When an analysis finds work, each finding becomes a plan row with a scope class — the analysis result automatically drives how hard the implementation has to traverse.
 - **Plans can't be hollow.** A round's plan has to carry real content — the space, the suspicions, the evidence expected — and later rounds must name what changed since the last one. "Walk the axes" is not a plan.
 
-### How it traverses
+### How it traverses — the cycle
 
-- **Size sets the floor.** A small fix needs 1 pass through its scope; a surface needs 5, a page 6, a subsystem 10, a whole product 12. The gate counts actual rounds, not the declared budget — ending early doesn't close it.
-- **Each pass drills section by section.** A round walks the scope and focuses on each part in turn — every row gets evidence, not a summary impression of the whole.
+Implementation doesn't end at "it works." What was just built then goes through **cycles** — repeated rounds of analysis over the finished work:
+
+- **Each round is a full pass, not a spot-check.** A search plan for the round (what it's hunting, what it expects to find, what evidence each row will produce) → the walk, row by row across the scope → a findings batch → fixes applied and re-verified. Then the next round starts the process over on the improved version.
+- **A stranger grades it from round 2 on.** Work the agent produced itself gets reviewed by an independent critic who sees only the finished subject — never the plan, the intent, or the diff — and deposits a written verdict. Findings the author disputes get defended in writing and carried into the next round's brief; nothing gets argued away silently.
+- **Size sets the floor.** A small fix needs 1 round; a surface needs 5, a page 6, a subsystem 10, a whole product 12. The gate counts actual rounds, not the declared budget — ending early doesn't close it.
+- **Evidence can't repeat.** Each round needs at least one row of *executable* evidence — a run, a probe, a computed value, not a document cite — and evidence re-cited verbatim in a later round fails unless it's declared a re-check. Every round has to actually go look again.
 - **Every finding ends somewhere.** Fixed, filed to the tracker, or ruled not-a-defect — "noted" is not an ending.
-- **A review after the last edit.** The final pass re-reads the diff the way a senior reviewer would — bugs, edge cases, anything that would embarrass — and the verdict is written down. "It built" is not done.
-- **Deep, but bounded.** A scope can't outgrow roughly double its declared size — the floor has a ceiling, so thorough doesn't mean infinite.
+- **A review before it may end.** Before any ending is declared, a final pass re-reads the whole diff the way a hostile senior reviewer would — bugs, edge cases, anything that would embarrass — and writes the verdict. "It built" is not done.
+- **Ending is a named exit.** A run closes only one of four ways — `clean-walk` (a full round found nothing), `budget-met`, `fix-scope`, or `redirected` (you moved the target). Below the floor only a real redirect ends it — and "one more nit" can't extend it past the residence limit either.
+- **Rejected work cycles back.** If you call the result shallow, the next attempt re-opens with a required "what the last pass missed" section — your rejection becomes part of the assignment.
 
 The same spine shapes the report itself: a substantial answer ends with the plan, the coverage count, the evidence, and the ranked synthesis — the reasoning is auditable, not just the result.
 
