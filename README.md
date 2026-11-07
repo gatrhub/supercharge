@@ -21,6 +21,39 @@ The gate is what makes the depth non-negotiable: you can't fake the paper trail 
 3. **Work.** It walks the whole space: every element examined, every pass the scope requires, findings double-checked. Small scripts record what it actually does — every file touched, every command run.
 4. **Finish.** The agent says "done." The gate runs ~75 checks against the record. Anything missing or half-done gets named, and the agent has to fix it — or write down exactly why it can't, with proof. It can't just end and walk away.
 
+## What the agent is made to do
+
+The rules don't just demand effort — they specify the method. Three working modes:
+
+### How it analyzes
+
+An analysis ask becomes a written project, not a chat answer:
+
+- **List the whole space first.** Every unit — every setting, every route, every file in scope — gets enumerated from a real source (the registry, the route table, the directory tree), not described as "the settings, broadly."
+- **Plan before walking.** The agent writes down what it intends to examine and what it expects to find — then a second reviewer, independent of the author, has to confirm the plan covers the whole list *before any analysis starts*.
+- **Walk every unit.** Each item gets its own section: what was examined, what was found, and the evidence. A heading alone doesn't count.
+- **Drill into what's found.** Nested things discovered mid-walk — a setting's modal, a modal's second page — become units of their own, each examined in turn. Undrilled discoveries hold the stop: nothing gets noticed and skipped.
+- **Log every hypothesis.** Each suspicion is recorded and closed as `found:`, `cleared:`, or `unverifiable:` — the examined-and-cleared half of the work stays visible, not just the hits.
+- **Double-check the findings.** Any findings — or a space bigger than eight items — owes a second pass that re-verifies with fresh evidence, not a re-read of the first.
+- **Reconcile before reporting.** The coverage math is checked (`12 examined / 12 listed`), findings get ranked, the mechanism behind them is named, alternatives get weighed — and what was *not* examined is declared in writing. "I didn't look at X" lives in the record instead of disappearing.
+
+### How it plans
+
+- **No edits before a plan exists.** The pre-save checks block code changes that land ahead of a written plan.
+- **Bigger changes, written batch plans.** Touching three or more implementation files requires a batch plan with a declared size — fix, surface, page, subsystem, or product — and that size sets how deep the walk must go.
+- **Analysis hands off to implementation.** When an analysis finds work, each finding becomes a plan row with a scope class — the analysis result automatically drives how hard the implementation has to traverse.
+- **Plans can't be hollow.** A round's plan has to carry real content — the space, the suspicions, the evidence expected — and later rounds must name what changed since the last one. "Walk the axes" is not a plan.
+
+### How it traverses
+
+- **Size sets the floor.** A small fix needs 1 pass through its scope; a surface needs 5, a page 6, a subsystem 10, a whole product 12. The gate counts actual rounds, not the declared budget — ending early doesn't close it.
+- **Each pass drills section by section.** A round walks the scope and focuses on each part in turn — every row gets evidence, not a summary impression of the whole.
+- **Every finding ends somewhere.** Fixed, filed to the tracker, or ruled not-a-defect — "noted" is not an ending.
+- **A review after the last edit.** The final pass re-reads the diff the way a senior reviewer would — bugs, edge cases, anything that would embarrass — and the verdict is written down. "It built" is not done.
+- **Deep, but bounded.** A scope can't outgrow roughly double its declared size — the floor has a ceiling, so thorough doesn't mean infinite.
+
+The same spine shapes the report itself: a substantial answer ends with the plan, the coverage count, the evidence, and the ranked synthesis — the reasoning is auditable, not just the result.
+
 ## How it works
 
 ```
