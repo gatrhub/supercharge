@@ -123,6 +123,11 @@ are the operational facts that block unprepared agents:
   hypotheses + per-axis evidence; later rounds name what changed) and
   `BATCH-PLAN` rows name the scope class. A ≥3-file batch with no lane
   still owes the plan quartet.
+- **Long work gets a phase ledger.** `PHASE <n> <name> — exit:
+  <criteria> — status: open|in-progress|blocked|done` rows in a lane
+  doc — the prompt hook reports `PHASE-POSITION:` (Phase N/M, done,
+  remaining) at every prompt. Lanes hold *what* is open; phases hold
+  *where* the work stands.
 - **When confused, read the state file.** `.unlazy/gate-state/<sid>.json`
   is what the gate believes (armed docs, touched files, owed deltas).
   Reconcile state-vs-disk rather than re-writing evidence.

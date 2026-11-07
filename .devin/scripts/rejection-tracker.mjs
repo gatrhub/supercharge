@@ -27,7 +27,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { laneOpenRows, NOT_LANE_REASONED_RE, docDriver } from "./deferral-patterns.mjs";
+import { laneOpenRows, NOT_LANE_REASONED_RE, docDriver, phaseStats } from "./deferral-patterns.mjs";
 
 const ROOT = process.env.DEVIN_PROJECT_DIR || resolve(realpathSync(dirname(fileURLToPath(import.meta.url))), "..", "..");
 const STATE_DIR = join(ROOT, ".unlazy", "gate-state");
@@ -184,6 +184,7 @@ function main() {
     state._lane_scan_rounds = (state._lane_scan_rounds || 0) + 1;
     const lanes = [];
     const undeclared = [];
+    const phaseLedgers = [];
     const LANE_DIRS = [
       join(ROOT, ".unlazy", "analysis"),
       join(ROOT, ".unlazy", "audit-ledger"),
@@ -212,6 +213,14 @@ function main() {
         const drv = docDriver(text);
         if (drv && drv !== sid) continue;
         const openRows = laneOpenRows(text);
+        // Phase ledger: docs carrying ≥2 PHASE rows get a position
+        // rollup at every prompt — independent of open-row lanes (a
+        // phase doc's own statuses track completion). Driver-foreign
+        // and declared-closed docs stay skipped.
+        const phases = phaseStats(text);
+        if (phases && phases.total >= 2 && phases.remaining > 0 && !NOT_LANE_REASONED_RE.test(text)) {
+          phaseLedgers.push({ doc: join(dir, f).replace(/\\/g, "/"), phases });
+        }
         if (openRows <= 0) continue;
         if (NOT_LANE_REASONED_RE.test(text)) continue;
         const entry = { doc: join(dir, f).replace(/\\/g, "/"), open: openRows };
@@ -220,7 +229,18 @@ function main() {
     }
     state.resume_lanes = lanes;
     state.undeclared_ledgers = undeclared;
+    state.phase_ledgers = phaseLedgers;
     saveState(sid, state);
+    if (phaseLedgers.length) {
+      note(
+        `PHASE-POSITION: ${phaseLedgers.map((p) => {
+          const c = p.phases.current;
+          return `${basename(p.doc)} is at Phase ${c ? c.n : "?"}/${p.phases.total} — "${c ? c.name : "?"}" (${c ? c.status : "?"}) — ${p.phases.done} done, ${p.phases.remaining} remaining`;
+        }).join(" | ")}. ` +
+        `Phase rows are the project rollup lanes never had: \`PHASE <n> <name> — exit: <criteria> — ` +
+        `status: open|in-progress|blocked|done\` in a lane doc (00-operating §3 → phase ledger).`
+      );
+    }
     if (undeclared.length) {
       note(
         `UNDECLARED-LEDGER: ${undeclared.length} ledger doc(s) carry open rows but no lane declaration — ` +

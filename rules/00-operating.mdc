@@ -251,6 +251,14 @@ Use a task MD when the work touches about 3+ files, spans hours or sessions, is 
 - [ ] T2: … | waiting on: user retest / decision
 ```
 
+**Long-horizon arcs get a phase ledger.** Work spanning weeks or many sessions (a full rebuild, a multi-system migration) adds ordered `PHASE` rows to its lane doc — inside the `## Phases` section or alongside the lane rows:
+
+```
+PHASE <n> <name> — exit: <criteria> — status: open|in-progress|blocked|done
+```
+
+Order is by `n`; the first non-done phase is the position. The prompt hook reports `PHASE-POSITION:` at every prompt — "Phase 2/5 — adapters (in-progress), 1 done, 3 remaining" — so the project's place in its arc is never held in memory. Lanes hold *what* is open; phases hold *where* the work stands.
+
 ## 3a. Issue trackers list open work only
 
 **Hard rule — this is the only copy of it.** Applies to every MD file that lists issues or tasks (`*-tasks.md`, `*-issues.md`, `*-analysis*.md`, `*-audit*.md`, anything with issue IDs such as M1, Q5, GH-U23).

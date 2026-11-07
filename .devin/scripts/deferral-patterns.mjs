@@ -156,6 +156,33 @@ export const laneOpenRows = (text) =>
 // and says why. Zero-open-row docs never reach this check anyway.
 export const NOT_LANE_REASONED_RE = /^\s*(?:Lane|Ledger)\s*:\s*(?:none|closed|not-a-lane)\b[^\n]*?(?:—|--|::| - )\s*\S[^\n]{19,}/im;
 
+// --- Phase ledger — ordered position inside a lane doc --------------
+// `PHASE <n> <name> — exit: <criteria> — status: open|in-progress|
+// blocked|done` rows give a lane an ordered position: lanes hold open
+// rows; phases hold WHERE in the arc the work stands. The first non-done
+// phase is the current position; rejection-tracker reports it at every
+// prompt (00-operating §3 → phase ledger).
+export const PHASE_ROW_RE = /^\s*PHASE\s+(\d+)\s+([^—\n]+?)\s+—\s*(.+?)\s*$/;
+export const phaseStats = (text) => {
+  const rows = [];
+  for (const line of String(text || "").split("\n")) {
+    const m = line.match(PHASE_ROW_RE);
+    if (!m) continue;
+    const rest = m[3];
+    const sm = rest.match(/status\s*:\s*([a-z-]+)/i);
+    const status = sm
+      ? sm[1].toLowerCase()
+      : /\b(done|complete|shipped|closed)\b/i.test(rest) ? "done" : "open";
+    const em = rest.match(/exit\s*:\s*(.*?)\s*(?:—\s*status|$)/i);
+    rows.push({ n: parseInt(m[1], 10), name: m[2].trim(), status, exit: em ? em[1].trim() : "" });
+  }
+  if (!rows.length) return null;
+  rows.sort((a, b) => a.n - b.n);
+  const done = rows.filter((r) => r.status === "done").length;
+  const current = rows.find((r) => r.status !== "done") || null;
+  return { total: rows.length, done, remaining: rows.length - done, current, rows };
+};
+
 // --- Marker-aware scan grammar (boundary-study B6/B14) — the dark-dir
 // scan's discharge set: machinery marker heads that a check actually
 // consumes. A deferral-vocabulary line in a machinery doc clears only

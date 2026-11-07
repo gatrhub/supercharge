@@ -43,6 +43,7 @@ An analysis ask becomes a written project, not a chat answer:
 - **Bigger changes, written batch plans.** Touching three or more implementation files requires a batch plan with a declared size — fix, surface, page, subsystem, or product — and that size sets how deep the walk must go.
 - **Analysis hands off to implementation.** When an analysis finds work, each finding becomes a plan row with a scope class — the analysis result automatically drives how hard the implementation has to traverse.
 - **Plans can't be hollow.** A round's plan has to carry real content — the space, the suspicions, the evidence expected — and later rounds must name what changed since the last one. "Walk the axes" is not a plan.
+- **Long work gets a phase ledger.** Ordered `PHASE` rows in a lane doc track where the project stands — every prompt re-surfaces "Phase 2 of 5 — adapters (in progress), 1 done, 3 remaining." Position lives in the file, not in memory — a new session picks up mid-arc without being told.
 
 ### How it traverses — the cycle
 
