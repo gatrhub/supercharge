@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" --event sessionStart",
+        "timeout": 5
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" rejection-tracker.mjs",
+        "timeout": 5
+      }
+    ],
+    "preToolUse": [
+      {
+        "matcher": "^(Write|Edit|StrReplace|MultiEdit|NotebookEdit|Delete|DeleteFile|CreateFile|SearchReplace)$",
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" check-opening-discipline.mjs",
+        "timeout": 5
+      },
+      {
+        "matcher": "^(Write|Edit|StrReplace|MultiEdit|NotebookEdit|Delete|DeleteFile|CreateFile|SearchReplace)$",
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" check-cycle-plan.mjs",
+        "timeout": 5
+      },
+      {
+        "matcher": "^(Write|Edit|StrReplace|MultiEdit|NotebookEdit|Delete|DeleteFile|CreateFile|SearchReplace)$",
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" check-analysis-doc-edit.mjs",
+        "timeout": 5
+      },
+      {
+        "matcher": "^(Shell|Bash|Terminal)$",
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" check-opening-discipline.mjs",
+        "timeout": 5
+      },
+      {
+        "matcher": "^(TodoWrite|UpdateTodo|update_plan)$",
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" check-item-closure.mjs",
+        "timeout": 5
+      },
+      {
+        "matcher": "^(Write|NotebookEdit|CreateFile)$",
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" check-hero-first.mjs",
+        "timeout": 5
+      }
+    ],
+    "postToolUse": [
+      {
+        "matcher": "^(Write|Edit|StrReplace|MultiEdit|NotebookEdit|Delete|DeleteFile|CreateFile|SearchReplace|Shell|Bash|Terminal|Task|TodoWrite|UpdateTodo)$",
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" session-tracker.mjs",
+        "timeout": 5
+      },
+      {
+        "matcher": "^(Write|Edit|StrReplace|MultiEdit|NotebookEdit|CreateFile|SearchReplace)$",
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" check-render-lint.mjs",
+        "timeout": 10
+      },
+      {
+        "matcher": "^(Write|Edit|StrReplace|MultiEdit|NotebookEdit|CreateFile|SearchReplace)$",
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" check-design-arithmetic.mjs",
+        "timeout": 10
+      }
+    ],
+    "stop": [
+      {
+        "command": "node \".devin/scripts/cursor-hook-adapter.mjs\" stop-gate.mjs --timeout-ms 27000",
+        "timeout": 30,
+        "loop_limit": 25
+      }
+    ]
+  }
+}

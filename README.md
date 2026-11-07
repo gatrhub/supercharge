@@ -130,8 +130,9 @@ There's no exit that leaves no record — that's the point.
 | Path | What it is | Put it in |
 |---|---|---|
 | `rules/*.mdc` | 22 rule files — the constitution, work contract, verification, analysis-depth, iteration loop, the check map, domain rules | `<repo>/rules/` |
-| `.devin/scripts/*.mjs` | 17 scripts — the gate, the watchers, the pre-save checks | `<repo>/.devin/scripts/` |
+| `.devin/scripts/*.mjs` | 18 scripts — the gate, the watchers, the pre-save checks, the Cursor adapter | `<repo>/.devin/scripts/` |
 | `.devin/hooks.v1.json` | Wires the watchers in for Devin CLI | `<repo>/.devin/hooks.v1.json` |
+| `.cursor/hooks.json` | Same wiring for Cursor (CLI/Desktop) — every stage runs through `cursor-hook-adapter.mjs`, which translates Cursor's payload and verdict formats | `<repo>/.cursor/hooks.json` |
 | `.claude/settings.example.json` | Same wiring, for Claude Code | merge into `<repo>/.claude/settings.local.json` |
 | `.devin/skills/*` | 26 skills — unlazy, briefing, the design set, tdd, debugging, and more | `<repo>/.devin/skills/` |
 | `.agents/skills/*` | security-audit + unlazy, for agent-tool layouts | `<repo>/.agents/skills/` |
@@ -151,9 +152,15 @@ There's no exit that leaves no record — that's the point.
 # from this bundle's root, inside your repo:
 cp -r rules .devin .agents .claude AGENTS.md /path/to/your-repo/
 
+# Cursor users also get:
+cp -r .cursor /path/to/your-repo/        # hooks.json — plus copy rules/ into .cursor/rules/
+
 # sanity check the scripts parse:
 node --check /path/to/your-repo/.devin/scripts/stop-gate.mjs
+node --check /path/to/your-repo/.devin/scripts/cursor-hook-adapter.mjs
 ```
+
+Note on Cursor's `stop`: a blocked ending re-enters as an automatic follow-up message (that's Cursor's block mechanism — arguably better than a hard block, the agent is literally told what to fix). The shipped `hooks.json` sets `loop_limit: 25` so the gate can re-ask many times; Cursor's default of 5 would cap enforcement.
 
 **Which tools it works with:**
 
@@ -161,7 +168,7 @@ node --check /path/to/your-repo/.devin/scripts/stop-gate.mjs
 |---|---|
 | Devin CLI | Everything — `hooks.v1.json` wires all four watch points |
 | Claude Code | Merge `.claude/settings.example.json` into `<repo>/.claude/settings.local.json` |
-| Cursor | Copy or link `rules/` → `.cursor/rules/` (the scripts read either location) |
+| Cursor (CLI/Desktop) | Full — `.cursor/hooks.json` wires every stage through the adapter, and `sessionStart` injects the briefing pointer automatically. Also copy `rules/` → `.cursor/rules/` (Cursor's native rule location). Untested against a live session — the event map is documented, payload fields verified against Cursor's schema |
 | Devin Desktop | Copy `extras/devin-desktop/global-rules.md` to your user-level rules file |
 | Anything else | Rules and skills still load as guidance; the gate needs a stop-hook to run — without it, the system is advice, not enforcement |
 
