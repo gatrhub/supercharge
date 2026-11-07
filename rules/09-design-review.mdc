@@ -39,6 +39,35 @@ The remedy is structural: the design judgment must happen in its own pass,
 produce an auditable artifact, and happen before fixes are written — not
 be folded into "did my change appear on screen."
 
+## Capture tooling — "no camera" is a solvable problem
+
+Render evidence needs a way to take captures. When the ask owes
+screenshots and no capture path exists:
+
+1. **Check the harness first** — a browser/preview tool, a Playwright
+   or Browser MCP server, or an existing capture helper under
+   `.unlazy/` / `.scratch/` already counts. The stop-gate's capability
+   scan detects `node_modules/playwright`, `puppeteer-core`, and any
+   `capture|screenshot|shot|render|browser`-named helper script — once
+   one exists, "can't screenshot" is a refuted claim, not a wall.
+2. **No tool → ask the user before claiming impossible.** One focused
+   question — "no capture tool found; want me to provision one?
+   (`npm i -D playwright && npx playwright install chromium` is the
+   default)" — never a silent skip. An `IMPOSSIBLE:`/`DECLARED:` on
+   capture evidence filed without asking is the unasked-impossibility
+   failure: the wall was never tested.
+3. **On yes: provision, mint the recipe, document it.** Install the
+   tool yourself — or hand the user the exact command if installs are
+   theirs in this project's contract. Then write
+   `.unlazy/capture.<ext>` — a small script taking `<url> <out.png>`
+   (Playwright default) — verify it once on a real page, and add one
+   line to `AGENTS.md` (or the repo's always-on doc): "capture:
+   `node .unlazy/capture.mjs <url> <out.png>` — the project's render
+   evidence path." Future sessions inherit the capability, and the
+   capability scan registers the script on sight.
+4. **On no:** `ACCEPTED: <the user's own words>` — a declined
+   provisioning is a legal wall; an unasked one is not.
+
 ## The protocol — three passes (the re-read precedes the render)
 
 ### Pass 0 — Read-back (before the first render)

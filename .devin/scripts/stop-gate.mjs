@@ -5004,18 +5004,23 @@ function main() {
   // ("can't log in"); a hardcoded registry rots as new ones appear.
   try {
     const authLike = [];
+    const captureLike = [];
     for (const dir of [".unlazy", ".scratch"]) {
       const abs = join(ROOT, dir);
       if (!existsSync(abs)) continue;
       for (const f of readdirSync(abs)) {
-        if (/\.(py|mjs|js|sh)$/i.test(f) && /session|auth|login|staff|mint|cookie|credential/i.test(f)) {
-          authLike.push(`${dir}/${f}`);
-        }
+        if (!/\.(py|mjs|js|sh)$/i.test(f)) continue;
+        if (/session|auth|login|staff|mint|cookie|credential/i.test(f)) authLike.push(`${dir}/${f}`);
+        if (/capture|screenshot|screen-?shot|shot|render|browser|playwright|puppeteer/i.test(f)) captureLike.push(`${dir}/${f}`);
       }
     }
     if (authLike.length) {
       CAPABILITIES[0].paths = [...new Set([...CAPABILITIES[0].paths, ...authLike])];
       CAPABILITIES[0].label = "a session/auth helper";
+    }
+    if (captureLike.length) {
+      CAPABILITIES[1].paths = [...new Set([...CAPABILITIES[1].paths, ...captureLike])];
+      CAPABILITIES[1].label = "a capture/screenshot helper";
     }
   } catch { /* discovery is best-effort; fixed entries still bind */ }
   // Shared corroboration helpers — the last-message scan, the doc-level

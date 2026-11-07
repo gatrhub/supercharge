@@ -123,6 +123,7 @@ There's no exit that leaves no record — that's the point.
 - **Claims need receipts** — cited files must exist; `verify:` commands get re-run.
 - **Numbers get recounted** — every `x/y` tally is recomputed, never just read.
 - **The final report is scanned too** — claiming something that wasn't tried flags like a missing file.
+- **"Can't" gets probed** — a claimed wall (can't screenshot, can't log in) is checked against tools the repo actually holds: an installed headless browser, a minted helper script under `.unlazy/`. If no tool exists, the agent asks you before declaring impossible — and on a yes it provisions one (Playwright default), writes the capture recipe, and documents it so future sessions inherit it.
 - **Skips stay visible** — every bypass is named at every later stop.
 
 ## What's inside
