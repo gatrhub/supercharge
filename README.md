@@ -1,22 +1,25 @@
 # Supercharge — rules, skills, and a gate that checks the work
 
-An add-on for AI coding agents that makes them *prove* they did the work instead of just saying they did.
+An add-on for AI coding agents that makes them work deeper — map the whole problem before touching it, plan before acting, get the plan checked by an independent reviewer, walk every part of it, double-check the findings — and then *prove* it all happened, instead of just saying it did.
 
 ## The problem
 
-You ask an agent to analyze your settings or fix a bug. It comes back with a confident summary. Did it actually look at everything? Most of the time you can't tell — you're trusting its word.
+Left alone, an agent takes the shortest path: it skims a few files, summarizes what it saw, and reports "done." A real analysis and a one-pass skim produce the same confident answer — you can't tell the difference from the outside, so the agent has no reason to do the expensive version.
 
-This package fixes that. Three parts:
+This package removes the shortcut. Three parts:
 
-- **Rules** spell out exactly what the agent must do — written as requirements, not suggestions.
-- **Skills** teach it how — it reads them at the start of a session.
-- **A gate** runs when the agent tries to finish. It's a script that recounts what actually happened — files touched, documents written, numbers added up — and stops the session cold when the story doesn't match the facts.
+- **Rules** define how deep the work must go — as requirements, not suggestions. An analysis has to list everything it's about to cover before it starts, write a plan, get that plan verified by a reviewer who isn't the author, examine every single item with evidence, and re-verify its findings in a second pass. Code changes have to traverse their scope a minimum number of passes with a written record on each — bigger scope, more required passes.
+- **Skills** teach the agent how to work at that depth — 26 method guides (systematic debugging, test-driven development, design review, the depth discipline itself) it loads at the start of a session.
+- **A gate** runs when the agent tries to finish. It's a script that recounts what actually happened — files touched, documents written, plans verified, numbers added up — and stops the session cold when the record doesn't match the report.
+
+The gate is what makes the depth non-negotiable: you can't fake the paper trail without doing the work, because every artifact has to carry evidence that wouldn't exist otherwise.
 
 ## What a session looks like
 
-1. **Start.** The agent reads the rules and loads the skills it needs.
-2. **Work.** Small scripts watch and write down what it does — every file it touches, every command it runs.
-3. **Finish.** The agent says "done." The gate runs ~75 checks against the record. Anything missing or half-done gets named, and the agent has to fix it — or write down exactly why it can't, with proof. It can't just end and walk away.
+1. **Start.** The agent reads the rules and loads the skills — including the discipline skill that sets the working contract for the session.
+2. **Plan.** Before it touches the problem, it writes down the whole space it's about to cover. For analysis, a second reviewer — independent of the author — has to confirm the plan actually covers everything.
+3. **Work.** It walks the whole space: every element examined, every pass the scope requires, findings double-checked. Small scripts record what it actually does — every file touched, every command run.
+4. **Finish.** The agent says "done." The gate runs ~75 checks against the record. Anything missing or half-done gets named, and the agent has to fix it — or write down exactly why it can't, with proof. It can't just end and walk away.
 
 ## How it works
 
