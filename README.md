@@ -12,65 +12,81 @@ The rules are the contract. The skills are the method. The gate is the proof.
 2. **Work** — analysis asks produce `.unlazy/analysis/` project docs (enumerated universe → verified plan → per-unit walk → second pass → ranked synthesis). Implementation produces `.unlazy/iteration/` walk cycles (scope-declared, floor-bounded rounds of traversal → findings → applied fixes → exit review).
 3. **Stop** — `stop-gate.mjs` fires and runs ~75 checks: no-deferral, evidence-before-claim, analysis-depth floors, completion matrix, audit ledger, iteration records. Failures block with named obligations and legal discharge forms (`DECLARED:`, `BLOCKED:`, `EXEMPT-<CHECK>:`, `IMPOSSIBLE:` — each corroborated, not asserted). The agent cannot end a session on an unmet obligation or an unexplained exemption.
 
-## How it works — the machinery
+## How it works
 
-Four layers, each auditable on its own:
+The core problem this solves: an agent says *"I checked everything"* — and you have no way to know if it did. So this system makes the agent leave a paper trail, then has a script check the trail instead of trusting the words.
+
+Four pieces, each doing one job:
 
 ```
-rules/*.mdc          the contract — what must happen
-      ↓
-skills/*/SKILL.md    the method — how to do it well (loaded at briefing)
-      ↓
-hooks → trackers     the observation — what actually happened, recorded
-      ↓               as it happens (not reconstructed at the end)
-stop-gate.mjs        the adjudication — armed checks recompute the state
-      ↓               and block the stop on mismatches
-.unlazy/             the audit trail — evidence, artifacts, discharges,
-                     gate state — written by the session, checked by the gate
+rules/*.mdc          WHAT must happen — written as a contract, not advice
+skills/*/SKILL.md    HOW to do it well — the agent reads these at session start
+hooks + trackers     what ACTUALLY happened — recorded as it happens,
+                     not summarized at the end
+stop-gate.mjs        the bouncer — when the agent tries to end the session,
+                     this script recounts everything and refuses if
+                     reality doesn't match the report
 ```
 
-### The hook pipeline
+Everything the agent produces lands in `.unlazy/` — that's the paper trail the gate checks.
 
-Every check is driven by observed events, not the agent's declarations:
+### Watching the session as it happens
 
-| Hook event | Script(s) | What it does |
+Hooks fire at four points (this is the actual wiring from `hooks.v1.json`):
+
+| When | Script(s) | What it watches for |
 |---|---|---|
-| `UserPromptSubmit` | `rejection-tracker.mjs` | Scans the ask — arms check classes (analysis asks, verdict asks, rendered-subject asks, resume lanes), records rejections and re-asks, injects context reminders |
-| `PreToolUse` | `check-opening-discipline.mjs`, `check-cycle-plan.mjs`, `check-analysis-doc-edit.mjs`, `check-item-closure.mjs`, `check-hero-first.mjs` | Pre-write enforcement — briefing/plan must exist before implementation lands; batch-plan quartets arm on lanes and ≥3-file batches; doc-edit and item-closure invariants hold per write |
-| `PostToolUse` | `session-tracker.mjs`, `check-render-lint.mjs`, `check-design-arithmetic.mjs` | Records state per session (files touched, impl writes, ledger edits, armed signals, method-row timing — the raw material the gate recomputes) + render/design checks on touched surfaces |
-| `Stop` | `stop-gate.mjs` | ~75 checks recomputed from state + artifacts. Blocks with named obligations; the agent re-enters and must satisfy or discharge each one |
+| The user sends a message | `rejection-tracker.mjs` | What kind of ask this is (analysis? verdict? rendered UI?), whether it's a re-ask after a rejection, any standing lanes — so the right obligations switch on |
+| Before each file write | 5 `check-*.mjs` scripts | Briefing ran and a plan exists before code lands; batch-plan requirements on lanes and multi-file changes |
+| After each file write | `session-tracker.mjs` + 2 render checks | Every file touched, every impl write, ledger edits, armed signals — the raw facts the gate recounts later |
+| When the agent tries to stop | `stop-gate.mjs` | ~75 checks recount the session from state + artifacts |
 
-Not wired to hooks: `ui-coverage-probe.mjs` (the coverage-dump tool probes run on demand), `build-eyes-brief.mjs` (composes the stranger brief), `check-inventory-parity.mjs` / `binding-lint.mjs` (standalone lints), and three shared modules (`write-targets`, `deferral-patterns`, `instrument-manifest`) the others import — `session-tracker` doubles as one.
+A few scripts aren't hook-wired — the coverage probe and eyes-brief builder run on demand, and three shared modules are imported by the others.
 
-### How a check works
+### One check, end to end
 
-Each check has the same anatomy — visible in the `10-rule-enforcement.mdc` gate map:
+Say the ask is *"analyze all my group settings."* The word "all" switches on the depth checks. At stop time the gate looks for the analysis doc, then verifies:
 
-1. **Arm** — an observed signal puts the obligation in scope (a write to a code path, a quantifier word in the ask, an armed doc carrying a marker). The agent doesn't opt in; the signal does.
-2. **Satisfy** — a concrete artifact or content requirement (a section exists with parseable rows, a cited file exists on disk, arithmetic reconciles).
-3. **Discharge** — the honest exits, each written to `.unlazy/gate-evidence/<sid>.md` with corroboration: `DECLARED:` (a claim + its source — `user said "…"`, `file:line`, `verify:`, `env:`), `BLOCKED:` (a real external wall), `ACCEPTED:` (a user verb, verified against recorded user text), `IMPOSSIBLE:` (a wall + what was tried).
-4. **Exempt** — `EXEMPT-<CHECK>: <target or *> — <reason>`: auditable, never free. Wildcard pardons print at every subsequent stop so someone can see exactly what was waved away and why.
+- the **universe** is enumerated mechanically (every setting listed, each with a derivation) — not "the settings, broadly"
+- a **plan** was written *before* the walk, and an **independent pass** verified the plan covers the universe — the artifact must exist on disk
+- **each unit** carries `Examined:` + `Found:` + an evidence token — a heading is not an examination
+- a **second pass** re-verified the findings with new evidence — one pass is coverage, the second is verification
+- `UNITS: 12/12` **reconciles** — the gate recounts sections vs rows, it doesn't read the claim
 
-### The artifact families
+Same shape for implementation work: a scope-declared walk (fix 1 round … product 12) with per-row evidence, findings closed with terminal dispositions, and an exit verdict recorded after the last write.
 
-| `.unlazy/` dir | Holds | What it's proof of |
+### When the agent genuinely can't
+
+Real walls exist — no subagent permission, a service that's down, a user decision. The exits are named and each one is written down with its proof:
+
+- `DECLARED:` — a claim plus its source (`user said "…"`, `file:line`, `verify:`, `env:`)
+- `BLOCKED:` — a real external wall
+- `ACCEPTED:` — the user's own words, verified against recorded user text
+- `IMPOSSIBLE:` — the wall plus what was actually tried
+- `EXEMPT-<CHECK>:` — an explicit pardon with a reason; wildcard pardons print at every later stop so nothing gets waved away silently
+
+An escape hatch that leaves no record doesn't exist — that's the point.
+
+### What lives in `.unlazy/`
+
+| Dir | Holds | Proves |
 |---|---|---|
-| `analysis/` | Subject-analysis docs (`<!-- analysis-project v2 -->`) | The ask was examined, not answered — universe enumerated, plan verified by an independent pass, every unit walked, findings re-verified in a second pass, ranked synthesis with a falsifier |
-| `iteration/` | Walk-cycle records (`<!-- iteration-loop v2 -->`) | Post-implementation work actually iterated — scope-declared floors (fix 1 / surface 5 / page 6 / subsystem 10 / product 12 rounds), traversal evidence per row, findings dispositioned, exit review verdicts |
-| `eyes/` | Independent-reviewer deposits | A stranger (not the author) graded the thing — briefs deposited verbatim so anchoring is auditable |
-| `gate-evidence/` | Per-session discharge ledger | Every DECLARED/EXEMPT/STOP/IMPOSSIBLE the session used — the escape hatch is a ledger, not a loophole |
-| `audit-ledger/` | Audit reconciliations | Enumerated universe × coverage rows arithmetic-checked (`COVERED: x/y` recomputed, not narrated) |
-| `gate-state/` | Tracker JSON per session | What the trackers observed — impl writes, armed signals, method-row timing, blind-debt, bypass records |
-| `coverage/` | Mechanical universe dumps | Coverage claims trace to a probe run, not a hand count |
-| `captures/` | Render evidence (screenshots, DOM dumps) | Rendered-subject claims trace to pixels/DOM, or the wall is declared |
+| `analysis/` | Analysis docs | The ask was examined, not answered |
+| `iteration/` | Walk-cycle records | The work iterated, didn't just land |
+| `eyes/` | Independent-reviewer artifacts | Someone besides the author graded it |
+| `gate-evidence/` | Discharge ledger | Every exit the session used, with reasons |
+| `audit-ledger/` | Audit reconciliations | Coverage math that adds up |
+| `gate-state/` | Tracker JSON | What was observed, per session |
+| `coverage/` | Mechanical enumeration dumps | Coverage came from a probe, not a guess |
+| `captures/` | Screenshots, DOM dumps | UI claims trace to pixels, not impressions |
 
-### The invariants that make it hold
+### The rules that keep it honest
 
-- **Session binding.** Artifacts are keyed to the session id — a sibling session's work never satisfies this session's check.
-- **Evidence before claim.** `verify:` lines are re-executed (read-only whitelist); `doc:` cites must exist; `file:line` must resolve; "I ran it" without a trail fails.
-- **Computed, not narrated.** `UNITS: x/y`, `COVERED:`, `Rounds: M/N`, coverage ratios — the gate recomputes every reconcilable number.
-- **Prose is scanned too.** The final message goes through lexical checks — describing finished work as standing work, claiming capabilities not tried, or hedging a blocker all flag.
-- **The record persists.** A released stop-bypass is a recorded artifact named at every later stop — escapes are auditable, never silent.
+- **Artifacts are session-bound** — a different session's work never counts for this one.
+- **Claims need trails** — `verify:` commands re-run, `doc:`/`file:line` cites must resolve.
+- **Numbers get recomputed** — every `x/y` reconcile is counted by the gate, not read from the doc.
+- **The last message is scanned too** — reporting finished work as unfinished, or claiming something untried, flags just like a missing file.
+- **Escapes stay on the record** — every bypass is named at every later stop.
 
 ## What's in the box
 
