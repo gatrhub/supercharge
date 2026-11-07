@@ -1,0 +1,105 @@
+{
+  "PreToolUse": [
+    {
+      "matcher": "^(edit|write)$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \".devin/scripts/check-opening-discipline.mjs\"",
+          "timeout": 5
+        },
+        {
+          "type": "command",
+          "command": "node \".devin/scripts/check-cycle-plan.mjs\"",
+          "timeout": 5
+        },
+        {
+          "type": "command",
+          "command": "node \".devin/scripts/check-analysis-doc-edit.mjs\"",
+          "timeout": 5
+        }
+      ]
+    },
+    {
+      "matcher": "^(exec|write_to_process)$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \".devin/scripts/check-opening-discipline.mjs\"",
+          "timeout": 5
+        }
+      ]
+    },
+    {
+      "matcher": "^todo_write$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \".devin/scripts/check-item-closure.mjs\"",
+          "timeout": 5
+        }
+      ]
+    },
+    {
+      "matcher": "^write$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \".devin/scripts/check-hero-first.mjs\"",
+          "timeout": 5
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "matcher": "^(edit|write|exec|run_subagent|todo_write|write_to_process)$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \".devin/scripts/session-tracker.mjs\"",
+          "timeout": 5
+        }
+      ]
+    },
+    {
+      "matcher": "^(edit|write)$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \".devin/scripts/check-render-lint.mjs\"",
+          "timeout": 10
+        },
+        {
+          "type": "command",
+          "command": "node \".devin/scripts/check-design-arithmetic.mjs\"",
+          "timeout": 10
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \".devin/scripts/rejection-tracker.mjs\"",
+          "timeout": 5
+        }
+      ]
+    }
+  ],
+  "Stop": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \".devin/scripts/stop-gate.mjs\"",
+          "timeout": 30
+        }
+      ]
+    }
+  ]
+}

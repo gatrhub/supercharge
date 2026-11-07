@@ -1,0 +1,33 @@
+---
+description: Running the dev server is allowed — avoid needlessly disrupting a server another agent is using
+alwaysApply: false
+---
+
+# Running the server
+
+Starting, stopping, and restarting the app (your dev server — `python -m
+<pkg>.server`, `npm run dev`, whatever your stack uses) is **allowed** —
+including for local testing, validation, and demos.
+
+## Guidance
+- You may run the server and restart it to pick up changes.
+- Be considerate of shared environments: don't needlessly kill or restart a
+  server that another agent (or the user) may be actively using. When editing
+  code, the reloader often picks changes up without a manual restart.
+- Kill processes by specific PID, never with broad `pkill -f` / name matches.
+- Prefer running long-lived processes in a persistent session (e.g. tmux) so
+  logs stay inspectable and the process can be reattached.
+- Leave useful services running after testing so the user can continue where
+  you left off, unless a clean restart is required.
+
+## Use it to verify
+- When you have a browser or HTTP tool, check standard and high-risk UI and
+  endpoint fixes (`08-code-quality.mdc` tiers) against the running server
+  yourself, so the item can leave **unverified** instead of waiting for a
+  user retest.
+- If you cannot run it (port held by someone else's session, a missing
+  service), say so and leave the item **unverified** with exact retest steps.
+
+## Older notes are superseded
+Some task files, docs and skills still say "do not start the dev server".
+This rule replaces them: running the server is allowed.

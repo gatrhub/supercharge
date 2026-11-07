@@ -1,0 +1,72 @@
+---
+description: UI/UX modularity — feature plugins, slots, tokens, one canDo, no React/Sass
+globs: app/ui/**/*.js,app/ui/**/*.css,app/templates/**/*.html,app/templates/**/*.j2
+alwaysApply: false
+---
+
+# UI / UX modularity
+
+Canonical: architecture plan **§12**. No React, Vue, Svelte. No Sass source of truth.
+
+## Layers (depend downward only)
+
+```text
+chrome (web | mobile)   — staff dashboards: ui_admin/internal (F1, never in public ui/)
+  → kernel (router, slots, register, focus, toasts)
+    → features/<id>/{index.js, view.js, actions.js, style.css}
+      → design/patterns (MessageRow, MemberRow, EmptyState, Skeleton)
+        → design/primitives (Button, Icon, Avatar, Modal, Menu)
+          → ui/lib + tokens.css
+```
+
+`features/foo` **must not** import `features/bar`. Chrome must not contain send-message or authz math. Fetch only through `app/ui/lib/api.js`. WS only through `app/ui/lib/ws.js`.
+
+## New screen = new feature
+
+`features/<id>/index.js` exports:
+
+- `id`, `routes`, `permissions`, `writePermissions`, `load` (dynamic import), `slots`
+- Optional `unsupportedShells: ["mobile"]` — chrome shows a real empty state; do not fork a second SPA
+
+`data-action="<id>.<verb>"` is registered only in that feature’s `actions.js`. No global `ACTIONS` / `window.onWS*`.
+
+## Permissions in UI
+
+One `app/ui/lib/permissions.js`. Staff chrome (`ui_admin/internal`) uses **staff** snapshot (`/api/platform/v1/me/staff-permissions`). Group chrome uses group/channel snapshots. Missing key → hide/disable. Server still enforces. Fetch snapshot **before** privileged chrome (no flash).
+
+Group privileged-view is kernel state; features do not special-case staff.
+
+## CSS
+
+- Tokens: `--app-*` in `tokens.css` only. One hex set (no mobile drift).  
+- Group accent: `--app-group-accent` on `[data-group-id]`.  
+- Names: `.app-btn`, `.app-msg`, `.app-chat-*`. Do not revive `.d-*` vs `.m-gh-*` as two systems.  
+- `@layer tokens, reset, primitives, patterns, chrome, features, editor`.  
+- Style Editor: JSON → `--pf-*` / `data-pf-*` via a **pattern**, not injected stylesheets. Editor may be desktop-only; **renderer** is shared.
+- **Desktop vs mobile CSS must be kept separate.** Desktop rules go in `features/<id>/style.css`. Mobile-only rules (viewport-width `@media`, touch overrides, safe-area insets, full-screen dialogs) go in `features/<id>/mobile/style.css`. Both files use the same `--app-*` CSS variables from `tokens.css` — that is the **only** shared surface. No `@media (max-width: …)` blocks in the desktop `style.css`. `@media (hover: none)` and `@media (prefers-reduced-motion: reduce)` are input-modality / a11y rules, not mobile viewport rules — they stay in the desktop `style.css`. Each feature's `index.js` loads both: `["./style.css", "./mobile/style.css"]`.
+
+## Product and design spec
+
+The the design target mockups are the look spec and the legacy surface is the feature checklist (`07-product-transfer.mdc`). Overlay slot: `data-slot="overlay"`. Shared dialog chrome: `ui/design/patterns/dialog-frame.js` (feature modals) and `ui/design/patterns/settings-sheet.js` (settings-family sheets — the `settings-modal.js` chrome was replaced 2026-10-18). Chrome opens overlays via kernel `openOverlay` — **do not** import `@features/`. Do not replace a modal with a GET landing.
+
+## UX contracts (required)
+
+| State | Use |
+|-------|-----|
+| Loading | `Skeleton` in the slot |
+| Empty | `EmptyState` + one permitted action |
+| Error | Toast + inline retry; generic prod copy |
+| Forbidden | Hide control; deep link → 403 panel |
+| Offline | Kernel banner; WS queue only for chat + `client_msg_id` |
+
+Optimistic UI: chat send with `client_msg_id` only; rollback on 403/422. Never optimistic kick/role grant.
+
+A11y: primitives own aria/keyboard; kernel owns focus trap + route announce; `prefers-reduced-motion`; mobile hit targets ≥ 44px.
+
+## Mobile / Internal / Tauri
+
+Mobile = **slot map** over the same features, not `mobile-app.js` 2.0. Internal = `ui_admin/internal` (staff-only tree served at `/staff-assets/`; public `ui/` never imports `@staff/`) + staff snapshot + `/internal` URLs (never `/admin`). **Each dashboard owns its theme and sidebar.** `/internal` routes to the entitled home or last visited. Moderation and Safety are different teams. Tauri/PWA wrap shells; they do not fork features.
+
+## Master helpers
+
+Before a new DOM/fetch/store util, open `app/ui/lib/dom.js`, `api.js`, `store.js`, `a11y.js`.

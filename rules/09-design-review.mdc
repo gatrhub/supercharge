@@ -1,0 +1,1303 @@
+---
+description: Design review — the enforced critique protocol for every user-visible surface change (fresh-eyes pass, element enumeration, auditable artifact, scoped claims)
+alwaysApply: false
+---
+
+# Design review — enforced critique protocol
+
+Applies to **every** change to user-visible surfaces — `app/ui/` and
+`app/ui_admin/` source files (.js/.css/.html/.j2, excluding generated
+bundles/manifests). The `.devin/hooks.v1.json` Stop hook
+(`stop-gate.mjs`, design-review + undefined-token checks) refuses to close a
+UI-touching session without the artifact below. This rule is why the gate
+exists — read it, the hook only enforces its shape.
+
+## Why this rule exists (the failure it kills)
+
+Three documented failure moves forced this into a hard gate:
+
+1. **Checklist substitution.** The ask was "is this good design / easy to
+   use"; the work done was "does it render, is the data real." A self-set
+   easier question was answered and reported against the user's bar.
+2. **Verification-as-critique.** "Zero console errors" and "element
+   present" were reported as design judgments. Mechanical checks verify
+   mechanics — never quality.
+3. **Self-authored pass criteria.** Review gates were written to measure
+   what the checker intended to check (e.g. "G-VISUAL: zero console
+   errors"), so the gate could never fail on design.
+4. **The chef never tastes the food.** A full polish pass produced
+   findings, fixed them, repainted, and reported "verified" — where
+   verified meant *the fixes appear on camera*. The flat surfaces (an
+   empty date-hero slab, a detail page that is a stack of form rows)
+   sailed through because the pass only asked "is it broken," never
+   "does it look deliberately composed." Mechanical verification of a
+   fix is not a judgment of the surface — and a verdict that never
+   happened cannot be caught. The verdict must therefore be a required
+   artifact: written, per surface, falsifiable.
+
+The remedy is structural: the design judgment must happen in its own pass,
+produce an auditable artifact, and happen before fixes are written — not
+be folded into "did my change appear on screen."
+
+## The protocol — three passes (the re-read precedes the render)
+
+### Pass 0 — Read-back (before the first render)
+
+After writing and before any screenshot: re-read the file top to
+bottom as a reviewer with a fixed checklist. The re-read is cheap and
+the render is expensive — and re-reads catch the class that renders
+find late, because most write-time defects are skipped decisions with
+readable signatures:
+
+- which states are unstyled (hover/focus/active/disabled/filled/empty)
+- what each text element does at 2× length and at empty (wrap
+  decisions made in spec vs discoveries left for the camera)
+- what defaults to a native control or browser primitive
+- what is a placeholder — invented chrome, unicode-as-icon, a control
+  that exists nowhere in the house
+- structural orphans — CSS rules for elements that don't exist,
+  `display` set on elements carrying `[hidden]`, inline elements
+  given width/height, unbalanced nesting
+- **invisible-by-default styling** — `::-webkit-scrollbar`,
+  `::selection`, `cursor`, `:focus-visible` rings, and any browser-
+  rendered chrome the surface touches. These never appear in an
+  element plan because they're invisible until wrong — that is
+  exactly why they ship unstyled. If the checklist doesn't name
+  them, they don't exist.
+- **the plain-render pass** — describe each element in literal
+  language with design vocabulary banned: "rounded box, border,
+  arrow over number, muted text." If the plain description sounds
+  like a default template, it is one — vocabulary ("shaped
+  affordance", "composed region") must not be allowed to launder
+  what the plain words expose.
+- **the bootstrap test, per element** — would this element be
+  indistinguishable inside a default template/tutorial? One
+  question, no hedging. That is the user's detector — a pass that
+  never runs it is reviewing a different artifact than the user sees.
+- **the liveness check** — every rendered interactive element
+  (button, tab, input, link, toggling class) gets asked "does it do
+  anything?" — read the wiring, not the shape. A control with no
+  handler, no state change, and no declared boundary is a defect at
+  write time, not a capture-time surprise. Dead controls wear real
+  control shapes; the lie is invisible until clicked.
+- **the resolved-value check** — for every `--app-*` token an
+  authored rule depends on, resolve it (`getComputedStyle` at the
+  element) before the first screenshot. Binding a token's *name*
+  proves nothing when a bundle redefines it on a stronger selector —
+  an accent that resolves pink instead of blue is invisible until
+  probed, and a blanket `button{}` reset silently beating a real
+  `@layer` rule is the same class: cascade collisions don't appear
+  in source, they appear in resolved values.
+- and **walk it in the user's eye-order** — top-left down, logo and
+  chrome first — not in build order. Scrutiny that follows
+  authorship order under-checks exactly the elements the user sees
+  first.
+
+Findings are written before the camera opens — a read-back that
+produces no artifact didn't run. The camera verifies the read-back;
+it doesn't replace it.
+
+### Pass 1 — Critique (before any fix)
+
+- Run **before** implementation or as the first step of a fix task.
+- **Fresh eyes required when reviewing your own work.** The reviewer must
+  not be filtering for "did my change appear." When the subject is work
+  this session (or your prior work) produced, fresh eyes means an actual
+  second agent — a subagent given only the screenshots + the design
+  question (it never saw your diff — that is the point). Self-review of
+  self-produced work cannot be comprehensive: the reviewer shares the
+  author's blind spot, so the "dedicated pass as a stranger" option exists
+  only for surfaces you did not author (`15-analysis-depth.mdc` §7).
+  When a subagent critiques, re-verify a sample of its findings against the
+  live surface yourself (`06-subagent-gatecheck.mdc`) — its output seeds
+  the artifact, it is not itself evidence.
+- **Independent eyes run at three points, not one.** Post-spec (does the
+  ladder/referent read right — a wrong register caught at spec is a
+  five-line fix), post-concept (which reads strongest to a stranger —
+  would a member pick it over the referent?), and post-build (the
+  artifact review). The earlier the eyes run the cheaper the correction;
+  eyes that only arrive at paint turn spec-time errors into rebuilds.
+  A concept set where the eyes run only once gets one verdict for the
+  set — per-concept verdicts or the concept axis was never sampled.
+  Every eyes brief must carry the comparative question — "which would a
+  member pick *over the referent*" — not only "find defects": defect
+  enumeration measures the floor; the referent comparison measures the
+  bar. A brief without it produces mechanical findings and aesthetic
+  silence. And the brief must demand the altitude data the schema
+  carries: a per-surface **score out of 10**, the **named distance to
+  the bar** ("what would the 9/10 version of this surface have that
+  this doesn't"), and per surface with an exemplar capture a
+  **side-by-side compare** at the same viewport. A brief that asks
+  "first three things wrong" commissions defect-hunting and gets
+  defect-hunting — the lake-alto pass found 13 defects and 5 quality
+  rows because that is what it was told to look for.
+- **The first render gets its own eyes pass on generative work.** When
+  the spec ran `## Directions` (new surface, mockup, redesign), the
+  FIRST surface's first screenshots go to a stranger cold-read BEFORE
+  the pattern propagates to siblings — deposited as an eyes-v2 artifact
+  at `.unlazy/eyes/<sid>-first-render.md`, briefed against the spec's
+  `## Quality contract` (a verdict vs the bar — distinctive moves
+  landed, generic failure modes absent — not a defect sweep), and
+  cited in this artifact. The author cannot cold-read its own
+  template-read; first render is the cheapest point it can be caught.
+  (The gate credits the pass by *cite*, not by filename — any eyes-v2
+  artifact named in the review as the first-render pass counts.)
+- **The spec itself gets the first stranger pass on generative work.**
+  Before the first render — `.unlazy/eyes/<sid>-spec.md` — a stranger
+  critiques the spec's *decisions* against the class ceiling
+  (13-design-spec → Spec critique). Ceiling-limiting decisions are
+  caught while they are still rows, not after they are eight pages.
+- **Eyes coverage spans the product, not the first page.** The union of
+  `## Coverage` rows across all of a session's eyes passes must touch
+  every `## Surfaces` row before the loop can end — a surface no
+  stranger ever saw is a surface no one reviewed. A launched pass that
+  never deposited is not coverage; the gate reconciles launches vs
+  deposited artifacts.
+- **Per-element drill-down.** The review walks every `## Inventory`
+  element row and gives each an *execution verdict* — not "present"
+  but "is this as good as the best version of this element" — with
+  render evidence or `DECLARED`. Effort becomes enumerable at element
+  granularity; "the card exists" is not the same job as "the card is
+  well-made." `## Element drill-down` carries the walk, at ≥ceil(
+  inventory rows / 3) rows.
+- **Per-page center-of-gravity.** Every surface in the review gets
+  its own gravity question — what is THIS page for, and does its
+  shell serve that eye-anchor? The template-sameness failure (one
+  3-column shell stamped on every page regardless of the page's job)
+  survives per-element checks because each element is fine in place;
+  it is only visible when the page is asked what it is for. A context
+  rail beside a single-thread conversation, a settings card eating a
+  third of a chat — these are gravity violations, not element
+  defects. Findings land class `aesthetic-floor`.
+- **The interrogation and the two altitude verdicts.** `## Interrogation`
+  carries one row per component — the expandable question ("could this be
+  made better" → the verdict: does it expand, what does it earn) or
+  `sole — <why>` on the surface. The review closes on two verdict lines:
+  `holistic:` — the whole read at composition zoom — and `micro:` — the
+  close read per element. A verdict at only one altitude is the half-read
+  the interrogation exists to catch.
+- **Scores make "fine" visible.** Every eyes pass deposits `## Scores`
+  — per surface a 1–10 and the named distance-to-bar. Verdicts without
+  numbers let "adequate" cover a 5 and an 8 with the same word.
+- **Judge like the user does:** open it, click what a user would click,
+  and ask of *every element* — does this make sense, is it easy to use, is
+  it impossible to make this better. The member-facing site (`ui/features`,
+  `ui/design`) is the reference bar for look and interaction quality —
+  not Old, not "the desk already did it this way."
+- **Enumerate, don't browse.** Coverage is a table, not a memory: one row
+  per surface × viewport **× persona where permissions differ**, listing
+  the elements actually looked at
+  (every interactive control, every empty/loading/error/filled state,
+  every dialog/inspector/menu the surface can open). "I looked at it" is
+  not coverage; a row naming what was examined is. Where an owner and a
+  minimal-permission member see different controls, both personas get
+  rows — founder-powerful browsing verifies nothing about member
+  experience.
+- **Cells are tasks.** Where the surface exists to let someone do
+  something, a coverage row records a *completed task* — "member with
+  only RSVP permission signs up," "guest opens the share link" — not
+  merely the elements present. A row that only attests existence is the
+  presence-verdict failure in a new costume
+  (`12-verification.mdc` → feature-level verification).
+- **Predict before you look.** Each rendered cell gets its predicted
+  state written in `## Predictions` before the capture — one line per
+  cell. A prediction-observation difference is a finding the moment it
+  appears; without a written prediction there is no observation that can
+  fail.
+- **Cover the whole surface, not the top viewport.** Pages and sheets
+  longer than the viewport get captured at every scroll offset — scroll
+  down, shoot, repeat until the bottom is on camera. Detail cards with
+  internal scroll (`.app-mk-detail-body`), long tables, and multi-section
+  forms are the usual misses: an element that lives below the fold and
+  never appears in a shot was never reviewed. Lazy-loading lists get
+  reviewed at both the first page and a loaded-more state.
+- **The naive-viewer pass — interrogate, don't recognize.** Reading a
+  capture as confirmation of what you believe it contains is not
+  review ("that's the real component" — said of a box whose arrow
+  paints transparent). Interrogate each region as a stranger, in
+  writing: *what is this? what can I do here? where is the action?*
+  An element a stranger can't explain (an unlabeled colored bar) or
+  can't reach (a CTA stranded outside the reading column's scan
+  path) is a P1. Comprehension and reachability are the user's axes;
+  a review that only checks conformance to spec cannot see them.
+- **Cold read before confirm read — always, and first.** Before ANY
+  list is consulted — the fix list, the spec, the coverage rows — the
+  reviewer looks at each capture and writes the first three things
+  wrong with it, from the eye only — including the boundaries: content
+  at every container edge and chrome seam, anything clipped, occluded,
+  or colliding is a named first-glance class, not confirm-read detail.
+  Then the confirm-read (the
+  checklist, the findings list, the spec diff) runs. The order is
+  the protocol: a review that opens with the list sees only what the
+  list came to check — dead space, thin composition, underwhelming
+  regions are visually loud at first glance and invisible to a
+  fix-verification scan. The artifact's `## Cold read` section
+  carries the first-glance wrongs; `## Findings` carries what the
+  instruments then confirmed. A review that ran confirm-read only
+  never looked at the surface — it looked at its own paperwork.
+- **Pixel verification, not DOM verification.** The verdict cites
+  what is *painted*, not what is in the tree: a 40×56 box with
+  `flex-direction:column` and an invisible arrow passes every DOM
+  check and fails the eye. Element-crop the authored components and
+  describe what is actually painted — geometry is not paint.
+- **Provenance tri-classification (match / real / identical asks).**
+  Every chrome region is classified in the artifact `## Provenance`
+  as `real-dumped` / `approximated` / `invented`, with its source.
+  Invented classes under real-sounding names is provenance
+  laundering — a violation, not a "fallback". "The chrome IS the
+  real thing" is an overclaim the moment one invented node exists.
+- **Screenshots are evidence, never the whole audit.** A shot shows what
+  *did* render in one state; the source shows what *can* render in every
+  state. Every critiqued surface also gets a code pass: read the paint
+  code for the states no shot can hold (hover/focus/disabled, loading,
+  error, empty, permission-gated, data-permutation variants), check the
+  event wiring actually does what the affordance promises, and reason
+  about what the element *should* be — not just whether the one captured
+  state looks right. "It looked fine in the screenshot" is not a verdict
+  on the element.
+- **A user-reported defect is a finding the moment it is named — and it
+  fires TWO findings.** When the user describes a UI/UX problem, it
+  enters the findings ledger (and the todo list) at once with severity
+  assigned — it does not wait for the next scheduled pass, it is never
+  absorbed silently into ongoing work, and it never leaves the session
+  in a "residual" or "known issues" section unfixed unless the user has
+  seen it named and accepted deferring it. Missing an item the user
+  already reported is a worse failure than missing one they haven't.
+  **The second finding is on the instrument that passed it:** a user
+  catch is external evidence that an internal pass failed — the same
+  round names which lens/vocabulary/comparison should have caught it
+  and patches that instrument, not only the artifact. Patching the
+  surface while leaving the blind instrument in place is how the same
+  blind spot survives every fix round — the user's rejection is the
+  strongest review signal the system has; treating it as a ticket
+  instead of a diagnosis is the waste.
+- **Defect classes get enumerated, not sampled.** A bare "find defects"
+  pass produces whichever class samples loudest — one review found
+  sixteen text-space findings and zero geometry ones because nobody
+  asked about geometry. Pass 1 walks the classes by name, each with a
+  verdict or `DECLARED:` — geometry & boundary collisions (content
+  clipped at container edges, sliding under chrome, controls cut by
+  `overflow:hidden`), environment coverage (the capture matrix
+  contains the user's actual viewport — a surface verified at 1400
+  for a 4K user was verified where nobody looks), omission vs the
+  domain checklist (what should exist but doesn't — the class
+  presence-checks cannot see), responsive behavior, interaction /
+  liveness, accessibility, truthfulness / provenance, state
+  transitions, visual hierarchy & edge collisions. Enumerating the
+  classes is what separates "checked" from "looked".
+- **Craft findings are mandatory, not optional.** A findings ledger
+  containing only mechanical/behavioral defects (wraps, inert
+  controls, data mismatches) and zero visual-quality findings is a
+  thin pass — the user's detector is perceptual ("this looks
+  un-designed"), and a review that surfaces nothing perceptual
+  reviewed mechanics, not the artifact. Every authored element gets
+  the bootstrap test and the plain-render description; every region
+  gets the element-level referent comparison — property by property
+  against the real source (`file:line` or capture), not a vibe
+  comparison. "Resembles the exemplar" is not a comparison; naming
+  the differing px/weight/treatment is.
+- **Prior critiques are the regression set.** Every defect the user
+  has ever reported in this session is ground truth for the next
+  review — a fresh look that surfaces none of the previously
+  reported defect *classes* (un-themed browser chrome, generic
+  controls, un-composed headers, approximated house chrome) missed
+  them, and that gap is itself a finding. Re-reporting a class the
+  user already named is the worst failure on this list.
+- **The structural ratchet — findings against an anatomy count as a
+  verdict on the anatomy.** Every finding carries the anatomy it
+  accuses (row-unit, header region, column scheme, hero block — the
+  structural unit, not the CSS class). Three or more findings against
+  one anatomy, across ANY review rounds, put the anatomy itself back
+  on the table: the next move is re-derivation from the referent, not
+  a fourth patch. Per-finding patching ratifies the structure it
+  fixes — a patch series that looks like progress while the form
+  stays wrong is sunk-cost ratcheting, and the ledger counts it as
+  coverage.
+- **Severity:** P0 blocking / P1 quality / P2 polish / P3 preference
+  (`taste-design-review`). P3s are listed, not fixed, in the same pass.
+- **Design-review findings have exactly six states — there is no "residual":**
+  `OPEN` (work in progress — keeps the session going), `FIXED`,
+  `VERIFIED` (fixed and re-painted/re-probed), `BLOCKED: <a real
+  external wall — the row stays open and holds the turn until the work
+  lands or `STOP: BLOCKED`/`STOP: USER-GATE` is declared>`,
+  `ACCEPTED: <the user re-scoped it — their verb on the row>`,
+  `NOT-A-DEFECT: <why it was never broken — the examined-and-correct
+  terminal for a suspected finding>`. Bare `accepted`/`blocked` with no
+  reason is not a state. `QUEUED:`/`SKIPPED:`/`later` are not states —
+  an open row is worked, never rescheduled.
+  These six are the surface-class set — a design defect is fixed on
+  the render or it stays open; `FILED:` does not exist here because
+  filing a design defect is deferral. The canonical findings-
+  disposition vocabulary (the doc-class `FILED:`/`CARRIED:` set
+  included) lives at `15-analysis-depth.mdc` item 15.
+  The words *residual, known issues, nice-to-have, for later, future
+  work, out of scope* are banned in artifacts and reports — they are
+  closure framing: unfinished work wearing a finished label. The stop
+  gate blocks them.
+- **A pass ends when the ledger ends, not when the turn feels long.**
+  Open P0/P1 findings mean the work continues — fix, or name a real
+  blocker to the user. "I found more while working" never ends the pass;
+  it *extends* the ledger. Deferral belongs to the user, never to the
+  agent: if you want to leave something open, ask.
+- Invoke the design skills first (`08-code-quality.mdc` → Design and
+  visual work): `design-taste`, `taste-design-review`, plus the
+  specialists as they apply — read `SKILL.md` files directly if the skill
+  tool doesn't list them.
+
+### Appearance-class work — the outcome → exemplar → kind protocol
+
+Two documented failure moves force this protocol:
+
+1. **Email-preview zoom.** Ask: preview "closer to the standard size of an
+   actual email". Fix: `zoom` on the existing thumbnail — bigger box, same
+   miniature. The dimension check passed; the look was wrong.
+2. **Email-as-card.** Ask: "improve the design of the email that's sent
+   out". Three turns polished the inherited card chrome (border, radius,
+   added a brand rule) — until the user named it: "emails are not cards".
+   The ask's enumerable items were all satisfied; the goal ("a good
+   email") was never in the objective. Postmortem: generation sampled the
+   *corpus prior* (template-builder markup is what "HTML email" looks
+   like in training data), self-consistency locked the first sample, and
+   no step compared the artifact to a real product email.
+
+Both share one mechanism: **the real goal was dropped at decomposition
+and a measurable proxy took its place.** This protocol keeps the goal
+alive from first sentence to final verdict. It fires on **any
+appearance-class ask** — "improve", "design", "better", "polish",
+"looks", "UI/UX", or any user-reported visual defect — not just analogy
+vocabulary.
+
+- **The outcome sentence comes first — before decomposition, before any
+  edit, and visible to the user.** For an appearance ask, the turn's
+  first output states it: *"you want X to read/feel like Y"* where Y is
+  a class of real artifact ("a letter from the product", "an inbox
+  render at normal scale"). The user's enumerated asks (logo, no pink,
+  better buttons) are **constraints on that goal — never the goal**.
+  A checklist can impersonate an unstated goal; it cannot impersonate a
+  stated one. A wrong reading caught in that sentence costs the user a
+  two-second scan, not three turns of artifacts.
+- **Exemplar conditioning before generation.** Name 2–4 real exemplars
+  of the artifact class and extract their *shared structural rules* —
+  not their styling (Linear/Stripe/GitHub mail → "flat column, no card
+  chrome, small logo, dominant headline, one CTA"). Unconditioned
+  generation samples the corpus prior, which for most HTML artifacts is
+  template sludge; the exemplar list is what replaces that prior. Local
+  referents count (the member surfaces, the redesign mockups) — and
+  when none exists, the named exemplar must be external, named anyway.
+  This happens **while** code is being written, not audited after —
+  self-consistency anchors on the first artifact that exists.
+- **The kind-check: artifact class before styling.** State what kind of
+  thing is being built ("a letter", "a notice strip", "a real-scale
+  render") and whether the current implementation already has that kind
+  right. A document gets typography, whitespace and one accent — never
+  container chrome; reaching for border/radius/shadow/a colored strip on
+  something a user *reads* is the tell that a control is being styled,
+  and it triggers the kind-check, not a style decision. If the kind is
+  wrong, the first change is **structural** — and styling a kind-wrong
+  artifact is classified as wasted work, not progress.
+- **Every element must name its job — or it is a finding.** In the
+  critique and in the verify pass, each element gets one sentence of
+  purpose. Ornament cannot name a job; that single test mechanically
+  catches decorative chrome (top rules, redundant separators, fake page
+  furniture) that pure property-checks wave through.
+- **The divergence list closes the loop.** Verification against an
+  appearance goal includes a written list: *"how does this differ from
+  the named exemplar, element by element — and is each difference
+  deliberate?"* Every divergence is justified in writing or it is an
+  open finding. This is the taste pass made falsifiable — it cannot be
+  satisfied by "no console errors". (When a design-spec governs the
+  change, the list lives in the artifact's `## Deltas` section —
+  `13-design-spec.mdc`.)
+- **Walk the surface like its designer — the whole-surface
+  interrogation.** Per-element checks miss emergent failures. Stand
+  back on the render and answer, in words: where does the eye land
+  first — is that the right place? Does the surface cohere under one
+  concept, or read as a committee of compliant parts? What did I add
+  that earns nothing? What state is missing? These are questions a
+  working designer runs every pass — the method is the quality
+  (`13-design-spec.mdc` → the stance), and an unanswered question is a
+  finding, not a shrug.
+- **Subtraction counts as a decision — report it like one.** Deletions
+  score low on visible-work proxies, which is why the system drifts
+  toward adding furniture. Report removals as first-class design
+  decisions with their rationale ("removed card chrome — emails are
+  letters") at the same weight as additions. A small diff accompanied
+  by named removals reads as designed, not thin.
+- **Appearance work is not done without the comparison.** Visual work
+  closes only when the exemplar comparison exists with no unexplained
+  divergences — the taste pass is a completion condition, not optional
+  polish on top of mechanical checks.
+
+#### The referent rule (unchanged — the foundation of this protocol)
+
+- **Analogy vocabulary means the spec lives outside the codebase.** When
+  a request describes an element by comparison to a real-world thing —
+  "real", "actual", "standard", "looks like", "like Mailchimp", "a real
+  email" — the spec is the referent, not the replica in front of you.
+  Preview mocks, thumbnails, and canned demos exist to *imitate* a real
+  surface; a request about their size or fidelity is about the thing
+  imitated.
+- **Referent identification before any mechanism.** One written line
+  before the first edit — "the user's X = <the real thing their words
+  point at>" — in the artifact's Interpretation block. If no referent
+  can be named, or two readings lead to materially different
+  implementations (magnify vs. re-lay-out), ask. That is an
+  interpretation question; "don't ask, just do it" instructions govern
+  permission and never cover interpretation.
+- **Magnification is not sizing.** `zoom` and `transform: scale()`
+  change the raster, not the layout metrics — internal typography stays
+  miniature while the box grows. Reaching for a magnifier on a
+  sizing/fidelity request is the signal that a geometric reading beat a
+  referential one; stop and re-check the referent first. Legitimate
+  uses exist (real zoom controls) — the tripwire is whether size is
+  being "fixed" by enlarging a shrunken replica.
+- **Appearance findings close on worded verdicts, never numbers.** A
+  bounding box cannot distinguish "renders at real scale" from
+  "magnified thumbnail" — both measure the same. The finding closes with
+  a verdict that quotes the user's phrasing and answers it in words:
+  `user asked "closer to a standard email" → looks like: <sentence>`.
+  A verdict that can't be filled honestly is an open finding.
+- **Aesthetic work iterates — it never one-shots.** At least one full
+  compare-to-referent loop (render → hold against the referent or a
+  captured render of it → adjust) before an appearance finding can
+  verify. If the real document the replica imitates can be rendered,
+  render it side-by-side — that render, not house style, is the bar for
+  preview-type surfaces.
+
+### Pass 2 — Verify (after fixes)
+
+- Repaint the fixed surfaces at every affected viewport **and every
+  scroll offset the surface needs**, re-run the same enumeration, and
+  update the artifact — findings resolved, regressed, or newly visible.
+- **Shared-budget fixes re-verify the whole unit.** An edit inside a
+  coupled allocation — colgroup, flex row, grid track, shared measure —
+  re-shoots and re-reviews the entire unit, not the named symptom:
+  subtracting from one term reallocates the others (a name-column fix
+  starved the action column it never re-measured). The finding's
+  closure row carries the siblings re-verified, not just the fix.
+- A fix is not done because it renders. It is done when a fresh look at
+  the whole element finds nothing left to flag at that severity bar —
+  in the code pass as well as on camera.
+- **Pass 2 is not the end either.** Findings that verify closed move the
+  session forward into the remaining OPEN rows — you do not report a
+  clean verify as the finish line while the ledger still has open items.
+  The turn ends when every row is terminal, a real external wall exists
+  and is declared as `STOP:`, or the user re-scoped the row themselves.
+
+#### The composition verdict (appearance-class work)
+
+Mechanical verification ("the fix is on camera") answers whether the
+patch landed. It never answers the ask's actual question — *does the
+surface look deliberately designed*. When the Interpretation names a
+referent/exemplar (any appearance-class ask), the repaint is not done
+until each repainted surface also gets a written **composition
+verdict** — the chef tastes the food. Required, mechanically gated
+(`10-rule-enforcement.mdc` → TASTE-VERDICT):
+
+- **Describe the render as a stranger.** Two sentences minimum, in
+  structural terms — where the eye lands first, what the dominant
+  region is, what carries the hierarchy. "A grid of cards" or "rows of
+  text" is itself a verdict. Adjectives alone are not a description:
+  `clean`, `fine`, `good`, `polished`, `sleek`, `premium`, `modern`
+  unaccompanied by structure are banned in verdict cells — the same
+  anti-adjective doctrine as the audit ledger.
+- **Name the weakest area.** Every repainted surface names its weakest
+  visual area — "the hero slab is a flat rectangle with a floating
+  date", "the right third of the content column is unused", "the
+  comment section has no visual anchor". A weakest-cell of `none —
+  <why>` is legal only with the defense written. A pass where every
+  surface's weakest area is empty or hand-waved is a pass where the
+  judging never happened — an all-clear across N repainted surfaces is
+  itself a finding, because real surfaces always have a weakest part.
+- **Map the exemplar's parts.** Before writing the verdict, extract
+  the named exemplar's structural parts (hero band? purchase/action
+  card? location block? weighted sections?) and check each for a
+  counterpart on this surface. A part with no counterpart is a named
+  divergence, not an invisible gap.
+- **Emit the verdict token.** Each surface row ends `| AT-BAR |` or
+  `| BELOW-BAR: <what it lacks — or the finding id it became> |`. A
+  BELOW-BAR verdict is a P1/P2 finding: it joins the ledger like any
+  other and the work continues.
+- **Name the biggest lever.** Each verdict row also answers "the
+  single highest-value improvement available on ANY axis — structure,
+  content, interaction, functionality — what would most improve this
+  whole?" For BELOW-BAR rows it names the finding; for AT-BAR rows
+  it is the honest next-best thing (or `none — <defense>`). A
+  whole-surface look that produces no lever is the skimmed-bird's-eye
+  signature.
+- **Re-ask the kind question at Pass 2.** The spec's kind-check fires
+  before composition; the repaint gets it again: is this surface the
+  right *kind* of thing — or a polished version of the wrong one?
+  Anchoring on the first frame built is a documented failure mode;
+  "better version of the wrong structure" is the trap it catches.
+- **Describe before you verify.** Pass 2 opens with the whole-surface
+  stranger-description BEFORE any fix-check — the open question
+  ("what do I see") must be answered before the closed one ("is my
+  fix there"), or the preloaded yes writes the observation.
+- **Walk for absences — `## Absences`.** Enumeration finds
+  wrong-things-present; it structurally cannot find
+  right-things-absent (the missing cover art, the missing weighted
+  region, the missing empty-state). Per repainted surface: what
+  *should* exist here — per the exemplar's parts, per the task —
+  that doesn't? The question is unfakeable only when it is
+  comparative: each row names the real-world comparator it was held
+  against (`vs <product/class>` — or `none — <defense>` when a
+  surface genuinely has no referent). An absence answer with no named
+  referent is a vibe, not a comparison. Each entry ends
+  `RAISED: <finding id>` or `NOT-NEEDED: <defense>`.
+- **The author's verdict needs an independent looker — and
+  independence is procedural when no subagent runs.** Your own look
+  at your own repaint can only confirm intent — the cook tasting the
+  plate from memory of the recipe. Subagents cost rate limits; the
+  same independence is achievable *in writing*: `## Fresh-look`
+  carries a delta table — **predicted** (what each surface will show,
+  written BEFORE the repaint exists) vs **observed** (what the shot
+  actually shows, ≥10 words, structural) vs `MATCH | MISS: <what
+  differed>`. A prediction written after the shots is memory wearing
+  a blindfold — the two columns exist to keep the passes separated in
+  the artifact, and ≥8 all-MATCH rows is the written-after signature
+  (FRESH-LOOK is mechanically gated). A critique-briefed subagent —
+  screenshots only, no diff, no intent — still satisfies it and is
+  the strongest looker when one can be afforded; the user's own
+  render review counts too (`EXEMPT-FRESH-EYES` names it).
+  **Presence deltas are not quality review.** Predict→observe rows
+  that only confirm "element rendered where expected" catch wrapping
+  bugs and miss design failure — the same author writing both
+  columns five minutes apart produces zero independence. Every
+  Fresh-look table ends with three mandatory quality answers:
+  `weakest area:` the surface's weakest region named honestly,
+  `exemplar-cut:` the one thing the exemplar's author would remove,
+  and `right-kind:` is this the right KIND of artifact vs the
+  referent (the question that catches a Reddit-width feed built
+  under a Canny-intent ask). A quality answer that finds nothing is
+  the looker looking away.
+- **The move-on gate — per-item closure.** Due diligence dies at the
+  task transition, not the session end: item N is marked done and
+  item N+1 begins with the scrutiny still unwritten. Before a todo
+  may be marked `completed`, its `CLOSURE: <item stem> — <what was
+  questioned across the axes, what was applied/raised, the verdict>`
+  must already exist in `## Closures` — the PreToolUse hook
+  (`check-item-closure.mjs`) refuses the transition mechanically, and
+  the stop-gate (ITEM-CLOSURE) verifies completeness at the end.
+  Scrutiny that isn't written before the transition didn't happen.
+- **Answer the excellence question in writing — `## Raises`.** For
+  each repainted surface, enumerate what the *best* version of it does
+  that this one doesn't — the "what would make this an extremely good
+  product" question made concrete. Every entry ends `RAISED: <finding
+  id>` (it became work) or `DEFENDED: <why the bar doesn't require
+  it>`. A surface with zero raises is a surface whose excellence was
+  never considered; a section that names only cheap wins is the
+  hand-waved variant — entries should name the expensive move, not
+  the easy one.
+- **Composition has measurable seams — use them.** Taste can't be
+  automated, but its absence has signatures worth probing on the
+  repaint: the largest flat uniform-color region vs. surface area (a
+  >~30% slab with a single glyph inside is the empty-hero class);
+  content bounding box vs. container width (a left-aligned cluster
+  leaving dead space); the count of distinct visual weights on the
+  page (one weight everywhere = flat). A probe that flags is a lead
+  for the verdict, never the verdict itself — the row still closes on
+  words.
+
+#### The element scrutiny (all UI work — the second look)
+
+Verdicts judge surfaces whole. They do not catch the element-level
+default — "put down an input box and moved on" — because an element
+can be individually un-styled inside a surface that reads fine. After
+fixes land, every touched surface gets a **scrutiny pass** — the
+"is there literally anything more I can do to this before moving on"
+question asked *per element*, in writing (ELEMENT-SCRUTINY is
+mechanically gated):
+
+- Per element/region of the surface: question its placement (does its
+  position make sense relative to its neighbors — does the eye arrive
+  in the right order?), its size (does the measure carry the weight of
+  its job vs the exemplar's equivalent?), and its finish (is it
+  styled, or is it a native/default paint wearing tokens?). A
+  `questioned` cell that names no actual question is the skipped-pass
+  signature — the row must name what was doubted, not that looking
+  happened.
+- **Scrutiny is axis-complete, not design-only.** Design is one axis
+  of five — every row tags its axis (`visual`/`functional`/
+  `security`/`performance`/`quality`) and cites the evidence type that
+  axis runs on: functional = an exercised state (probe/click/submit/
+  observed render), security = a `file:line` citation or `n/a:` +
+  reason, performance = a measured number or `n/a:` + reason, quality
+  = what the diff re-read found, visual = the shot description. A
+  missing axis gets `AXIS-NA: <axis> — <reason>` inside the section —
+  a session that never wrote a security/performance/quality row on
+  touched code checked the look and skipped the substance.
+- Every row ends `APPLIED: <the improvement made>`, `DEFENDED: <why
+  the element already holds — ≥5 words>`, or `RAISED: <finding id>`
+  (the doubt is real and became a finding — e.g. on a BELOW-BAR
+  surface whose fix is in the ledger). APPLIED rows are the
+  pass's own output: a scrutiny pass that finds zero improvements
+  across every element on a reworked surface is the same
+  never-judged signature as an all-clear verdict — expect some
+  APPLIED entries, and record them as the design decisions they are.
+- This is the pre-close re-examination, not a repeat of Pass 1:
+  Pass 1 asks what is wrong, scrutiny asks *what else can be better*.
+  An element that survives scrutiny earns "done" — an element never
+  scrutinized was passed, not finished.
+- **Coverage derives from the DOM, not memory.** A hand-written
+  element list can silently skip the element that needed questioning —
+  the untouched-element blind spot is *authored* blindness. Run
+  `.devin/scripts/ui-coverage-probe.mjs` against the touched surfaces;
+  it dumps every interactive element, section, and the state counts no
+  screenshot enumerates (hidden/disabled/aria-pressed/details/inputs)
+  per viewport × scroll offset — read-only, it never clicks. Cite it
+  as `coverage-source: .unlazy/coverage/<sid>.json` in the artifact
+  (COVERAGE-EXTERNAL is mechanically gated — coverage enumerated
+  <30% of the DOM's interactive count is the skip signature).
+- **User-caught misses are calibration, not just fixes.** Every defect
+  the user reports is a gate failure — some check should have caught
+  it and didn't. Each gets a `CALIBRATION: <the miss> → <the check
+  that should have fired> → <the rule change made>` row in
+  `## Calibration` (mechanically gated whenever rejection-tracker
+  recorded a report). Your catches become rule inputs permanently.
+- **The liveness ledger — mechanical, not judgment.** Every rendered
+  interactive on the surface gets a `## Liveness` row: `handler
+  wired` / `state changes` / `boundary declared` / `dead`. A control
+  with none of the first three is a defect — countable, no taste
+  needed. The coverage probe reports `deadCandidates` (elements
+  whose DOM shape has no action signature); the ledger must account
+  for every one.
+- **Causes are traced, not narrated.** A finding's root cause is
+  cited to `file:line` before it is reported — "the rule lives in a
+  file we didn't link" asserted while the real file sat ungrepped is
+  a wrong cause with a confident voice. `probably`, `likely`,
+  `somewhere`, `almost certainly` in an analysis row is a defect in
+  the analysis itself.
+- **The standing defect taxonomy is the regression set.** The
+  accumulated user-reported defect classes (§ The defect taxonomy,
+  end of this file) are re-walked at every fresh look: a pass that
+  misses a class the user already named is the worst failure, worse
+  than missing a new one.
+
+## The artifact — required shape
+
+Path: `.unlazy/design-review/<session_id>.md` (the hook prints the exact
+path when the gate arms). Must contain the sections below — and two
+reconciliations wherever the spec made claims: every `## Lazy signals`
+row's "designed out by" appears in this artifact's evidence or
+findings text (a lazy row whose mitigation was never verified on the
+render is self-attestation), and on generative work the
+`.unlazy/eyes/<sid>-first-render.md` cite (13-design-spec → Revision).
+
+```
+<!-- design-review v1 -->
+
+## Interpretation   (binds on EVERY rendered artifact — mockups,
+   standalone HTML, emails, docs — not only where the hook arms on
+   ui/ paths. Skipping it because no gate checks is rules-as-
+   suggestions; the block's job is upstream: it forces the referent
+   into words before the pixels exist)
+- ask: "make the email preview about 2x taller and a bit wider"
+- outcome: user wants the preview to read like a real inbox email at
+  standard scale — or "none — mechanical change, no appearance claim"
+- referent: an email rendered in an inbox at real scale
+- exemplar: real product mail (Linear/Stripe/GitHub class) — flat
+  column, no card chrome, small logo, one CTA — or "none"
+- verdict basis: reads like a standard inbox email, not a magnified
+  thumbnail — the words the verdict will be held to
+
+## Coverage
+| surface | file | viewport | persona | elements / task |
+|---|---|---|---|---|
+| email desk · campaigns | app/ui_admin/internal/marketing/email.js | 1440, 768 | staff.editor | tabs, chips, search, table, row-open, inspector, empty — task: staff.editor sends a campaign |
+
+## Predictions
+| cell | predicted | observed |
+|---|---|---|
+| member · events board | RSVP bar, no approve buttons | as predicted |
+
+## Findings
+| id | severity | element | finding | fix |
+|---|---|---|---|---|
+| D-1 | P1 | inspector | KV wall: 14 unlabeled rows, no hierarchy | group into Detail/Status/Actions sections |
+
+## Cold read   (required on all UI work — the first-glance record,
+   written BEFORE the fix/spec/checklist is consulted — the confirm-
+   read output lives in ## Findings. "nothing wrong at first glance"
+   per capture is a claim, not a row — a capture with no entry was
+   never cold-read)
+| capture | first three things wrong (eye only, no list) |
+|---|---|
+| c-1400 | columns spread thin — dead space in satellite cells; row is 5 lines where an index row is 1; pinned glyph floats mid-name |
+
+## Element drill-down   (required when the spec carries ## Inventory —
+   every inventory element gets an execution verdict, not a presence
+   check — "as good as the best version of this element" with render
+   evidence; DECLARED rows carry the why. An element that exists but
+   under-executes is a finding this section exists to name. **Row floor
+   scales: ≥ceil(inventory_rows / 3) drill rows** — a 20-element spec owes
+   7; ≤9 stays at the fixed floor of 3. The drill's count follows the
+   inventory's, or the count is coverage theater)
+| element | verdict | evidence / why |
+|---|---|---|
+| post card media tile | UNDER-EXECUTES — flat icon where a composed scene is the payload role | pn-index-1400-top.png vs spec payload row |
+| nav active pill | GOOD — soft-accent pill reads active at a glance | pn-index-768-top.png |
+
+## Verdicts   (required when the Interpretation names a referent/exemplar — Pass-2 composition verdict)
+| surface | what a stranger sees | weakest area | strongest objection | biggest lever | verdict |
+|---|---|---|---|---|---|
+| events board · cards @1400 | eye lands on the oversized flat date slab before the title; the grid ends at ~60% of the column and dead space owns the right | hero slab — uniform rectangle carrying one date, no content | it may read as deliberately minimal — but the slab carries no job the tile couldn't do at a third of the size | real cover art or a designed date tile — the card's identity region | BELOW-BAR: hero is a placeholder, not a designed region → D-7 |
+| events detail @1400 | reads top-down as one continuous column of hairline-separated rows; the RSVP segmented bar is the only weighted element | comments section — a bare input and a line of text, no authored block | the information is all present — but presence is not composition; nothing anchors the eye after RSVP | authored comment block + a weighted action region after RSVP | BELOW-BAR: no visual anchor after the RSVP card → D-9 |
+
+## Absences   (required with ## Verdicts — the missing-things walk)
+| surface | referent | what should exist that doesn't | outcome |
+|---|---|---|---|
+| events board · cards @1400 | vs Luma/eventbrite card grid | cover art or a designed identity region per card; a grid that owns its column | RAISED: D-7 |
+| events detail @1400 | vs discussion board thread + Ticketmaster purchase card | the board's comment composer structure; a venue/time block with real weight | RAISED: D-9 |
+| events settings sheet | vs display-mode pickers | nothing — the picker's two options carry all it needs | NOT-NEEDED: two real decisions, all present and styled |
+
+## Raises   (required with ## Verdicts — the excellence enumeration)
+| surface | what the best version does that this doesn't | outcome |
+|---|---|---|
+| events board · cards @1400 | Luma leads the card with the event's cover art; ours leads with a flat date block | RAISED: D-7 |
+| events detail @1400 | Ticketmaster anchors the page with a purchase/action card; ours has no action region after RSVP | RAISED: D-9 |
+| events settings sheet | best version previews each layout as a miniature render | DEFENDED: picker is two options — abstract tiles carry the distinction at this size |
+
+## Anatomy diff   (required when the Interpretation names a referent/exemplar —
+   the WHOLE-anatomy comparison the element-level diffs can't produce: per
+   surface/concept, the referent's structural contract beside ours —
+   lines-per-unit, payload allocation, region structure. "Index rows are
+   one line; ours are five" is a finding only this section makes. Element
+   diffs live in ## Deltas; this is the container-level contract)
+| surface | referent's anatomy | ours | verdict |
+|---|---|---|---|
+| index table · row | PyPI/npm: one line — name+ver+size+dls+age; payload behind expand | five lines — name wraps 3, desc, ext/size, req chips | BELOW-BAR: card payload in table costume → D-x |
+
+## Defense   (required when the Interpretation names a referent/exemplar —
+   the affirmative argument, one per surface: "this is designed because
+   ___ the way <referent>'s ___ does". A self-authored aesthetic claim
+   ("looks clean", "feels polished") does not satisfy the row — the
+   citation to the external artifact is what makes the sentence
+   checkable. A surface no such sentence can be written for is an
+   open finding, not a DEFENDED row)
+| surface | designed because |
+|---|---|
+| index table · row | carries one line of facts per row like the package-index exemplar — scannable at N rows/minute |
+
+## Scrutiny   (required on all UI work — element-level second look; every axis.
+   Per COMPONENT, not per surface: every named component in the
+   coverage row's elements column (head, row-unit, toolbar, rail,
+   modal — each a component) gets ≥1 visual-axis row. A surface whose
+   components were sampled rather than walked got a spot check, not
+   scrutiny. Visual-axis DEFENDED rows must cite the external anchor —
+   `ref: <exemplar element/value>` or `no-referent: <why none>` —
+   because "it holds" asserted by the author is the self-grading move
+   this section exists to kill. Every row also carries the expansion
+   verdict — `expandable: <named sub-unit>` when the component deserves
+   its own spec/round, or `sole — <why ≥30 chars>` when it closes here;
+   the question is uniform, not a writer judgment call)
+| element | axis | what I questioned | evidence | outcome |
+|---|---|---|---|---|
+| comment input (events detail) | visual | is a bare single-line input the right affordance where the board carries an authored composer? does its width match the region's measure? | shot detail-1400: input renders as a single default line, no authored block | APPLIED: composer-style input with action row |
+| RSVP segmented bar | functional | does the bar's wiring match its affordance — does each segment actually post the status it labels? | clicked Interested → state painted + roster head count moved | DEFENDED: wiring verified, affordance honest |
+| events api · RSVP route | security | does the RSVP write path confirm group membership before it mutates, or does it trust the event id? | adapters/http/events.py:214 — load_event checks group_id + member role before write | DEFENDED: fail-closed already holds |
+| events list query | performance | does the card list hydrate rosters per event (N+1) or join once? | api.js:88 — one fetch, roster map resolved client-side, 0 extra queries | DEFENDED: no N+1 on the list path |
+| respondZone (events view) | quality | does the re-read diff hold up — dead branches, duplicated logic, honest naming? | re-read: removed gold-at-rest chip styling; no dead paths left | APPLIED: calm-at-rest chip tokens |
+
+state pass: <one line — which element states were exercised (hover,
+   focus, disabled, empty, loading, error) and where the evidence lives,
+   or `state pass: n/a — <why>` when no states exist on the surface>
+balance pass: <one line — the visual weight + alignment sweep across
+   the surface (what was measured/compared), or `balance pass: n/a —
+   <why>`>
+
+## Interrogation   (required — one row per component: the expandable
+   question asked and answered — "could this be made better" → the
+   verdict: does it earn an expansion (into its own spec/round) and
+   what does that earn, or does the component close here. A surface
+   with no components left worth the question carries `sole — <why>`
+   on the section instead of a table)
+|| component | the expandable question | verdict |
+||---|---|---|
+|| roster names line | does a member-names string earn its own element (avatars, truncation, popover)? | expandable: roster-strip — names that don't resolve demote to a fallback, which is an element's worth of behavior |
+|| filter tabs | better as a segmented control? | sole — two options at this density; a segmented bar would borrow weight it doesn't earn |
+
+## Read-back   (required on appearance-class work — Pass 0, written
+   findings BEFORE the first render; 'nothing found' entries name
+   what was checked)
+| element/file region | what the re-read found | disposition |
+|---|---|---|
+| pvCover span | inline element given width/height without display | FIXED: display:block |
+
+## Stranger   (required on appearance-class work — the naive-viewer
+   pass; one row per region, written as a first-time user, not the
+   author — "can't explain" or "can't find" is a P1 finding, not prose.
+   The stranger also walks the surface's EDGES: anything clipped,
+   half-visible, or disappearing under a panel is what a first-time
+   user notices before they can name it)
+| region | what a stranger sees | what they think it does | what they can't explain or find |
+|---|---|---|---|
+| pulse bar | a thin multi-colored stripe | maybe a progress bar? — meaning hover-only | which color is which status; whether it's a filter |
+
+## Liveness   (required on all UI work — every rendered interactive
+   accounted for; probe `deadCandidates` must each appear here)
+| control | disposition | evidence |
+|---|---|---|
+| status menu | handler wired — opens popover, filters list | clicked @1400 |
+| rail search input | dead — no listener, no boundary toast | RAISED: D-x |
+
+## Geometry   (required when the coverage probe ran — every flag in
+   `clippedCandidates` and `occludedCandidates` reconciled, same
+   discipline as Liveness: authored-fix or inherited/expected with
+   the reason. A clipped or covered control is a defect even when the
+   element exists and is bound — presence ≠ reachability)
+| element | flag | disposition | evidence |
+|---|---|---|---|
+| row Get button | clipped — exceeds `.dl-tablewrap` clipper | authored-fix — action column widened | rect vs clipper box @1400 |
+| sticky tabs bar | occluded — elementFromPoint = sentinel | expected — sentinel marks the stuck state | hit-test @1400 |
+
+## Provenance   (required on match / real / identical asks — one row
+   per chrome region; invented classes under real names = violation)
+| region | class | source |
+|---|---|---|
+| topbar | real-dumped | _dom-topbar.html from live app |
+| channel items | approximated | real class names, hand-typed DOM — icon paths invented |
+
+## Pre-flight   (required before reporting — the top-5 most likely
+   user complaints in plain words; a predictable complaint is a
+   defect to fix or dispute, not to ship)
+1. "what does the colored bar mean" — pulse has no legend
+2. "the sort is far from the list it sorts" — controls outside the measure
+
+## Fresh-look   (required on appearance-class work — procedural independence)
+| surface | predicted (before repaint) | observed | delta |
+|---|---|---|---|
+| events board · cards @1400 | date tile anchors left of a composed body; RSVP chips quiet at rest | tile renders full-height; chips quiet; countdown sits gold on the meta line | MATCH |
+| event detail @1400 | facts block leads; authored comment box; roster names line | facts block leads; comment box present; roster shows "1 member" when names don't resolve | MISS: roster names line absent for non-member respondents → F3-23 |
+
+Quality answers (required — presence deltas are not quality review):
+- weakest area: <the surface's weakest region, named honestly>
+- exemplar-cut: <the one thing the exemplar's author would remove>
+- right-kind: <is this the right KIND of artifact vs the referent>
+
+## Closures   (required — one CLOSURE: line per session-completed item)
+CLOSURE: F3-13 detail — questioned the facts region's measure, the bare input's affordance, roster name resolution (visual/functional/quality axes); applied facts block + authored composer + fallback line; verdict AT-BAR on the thread, OPEN on non-member names.
+
+## Calibration   (required when the user reported a miss this session)
+CALIBRATION: subagent found untouched-element defects I passed (gold-at-rest chips, bare ICS link) → ELEMENT-SCRUTINY as then-shaped let me pick which elements to question → coverage now derives from the DOM probe and every axis must be answered.
+
+## Budgets   (required when a design-spec governed the change)
+| measure | exemplar | this surface |
+|---|---|---|
+| sections | 4 | 10 — finding |
+| interactive elements | 6 | 14 — finding |
+| scroll columns | 1 | 2 — finding |
+| saturated accents | 1 | 1 — ok |
+| native controls | 0 | 1 `<select>` — finding |
+
+## Options   (required — "none" when the spec's Open calls flagged no latitude)
+| option | tradeoff | recommended |
+|---|---|---|
+| detail as page | deep-linkable, room for roster | yes — matches exemplar chrome |
+| detail as modal | keeps context, but overflows the modal budget | no |
+
+## Deltas   (required when a design-spec governed the change — 13-design-spec)
+| element | exemplar's move | mine | verdict |
+|---|---|---|---|
+| vote box | shaped block + left-edge rhythm | flat inline count | open — reshape to block |
+
+## Unverified
+<personas, surfaces, states, viewports not exercised — named, never
+implied; or "none" only where the coverage rows genuinely fill the
+matrix>
+
+## Hypotheses
+| question asked | resolution |
+|---|---|
+| does the crumb icon match the channel kind? | found — chat glyph on a downloads channel |
+| does the search clear-button appear after typing? | cleared — renders on input, verified |
+| does the rail collapse before the content column? | unverifiable — no resize probe this pass |
+
+## Constraint check
+<the original ask re-read VERBATIM; every constraint in it →
+`carried` (where it landed) or `dropped` (the finding it raised).
+When the spec's ## Constraint ledger exists, diff against it; when
+none does, extract the constraints from the ask now. "none — <why>"
+only for asks carrying no checkable constraints>
+| constraint (quoted) | kind | verdict |
+|---|---|---|
+| "identical app UI (navbar, channel list, members list)" | method | dropped — F-07 invented member-row vocabulary |
+
+## Lenses
+<the passes that ran — one row per lens: mechanics / emphasis /
+domain-completeness / accessibility / stranger / taxonomy-regression /
+composition-signals / geometry / environment / omission. The geometry
+row reconciles probe `clippedCandidates`/`occludedCandidates` and any
+hand-spotted boundary collision; the environment row names the probed
+viewport list vs the user's actual environment and each claimed
+breakpoint — a matrix missing the user's real resolution is a failed
+environment lens, not a coverage detail; the omission row diffs the
+rendered surface against the domain checklist and each embedded-
+surface checklist — what should exist but does not. The composition-
+signals lens carries the
+assembled-not-designed vocabulary — the enumerable proxies for
+"underwhelming" that the other lenses can't name: dead space owned by
+nothing, compression asymmetry (the most important datum getting the
+least room — a name squeezed to 130px while a chevron keeps 30px of
+its own column), orphan controls (interactive elements with no
+labeled column or no reachable home), vestigial idioms (a table
+header surviving where the table semantics already collapsed),
+payload-in-wrong-tier (decision data behind expansion while
+attribution sits on the face). A surface can clear every other lens
+and still be assembled rather than designed — this is the row that
+names it>
+Each with a verdict or `DECLARED: <why not run>` — and every verdict
+carries its EVIDENCE: the element, `file:line`, or capture that
+grounds it. "Download is obvious — sole filled-accent element on the
+row" is a verdict; "✓ primary affordance" is a hallucination waiting
+to happen (the previous review's stranger pass described a "big
+Download column" that doesn't exist). A verdict with no verifiable
+grounding is an unexercised lens wearing a ran costume. Mechanics
+covers behavior and STATES, not just presence — a painted state
+(progress, saved, toggled) is a claim about behavior and is
+exercised, not described. The stranger row's author must be someone
+other than the builder — the independent-eyes pass or a second
+agent — or the row reads `DECLARED: builder-performed — weight
+accordingly`; a builder-performed stranger verdict reports the
+builder's intentions, not the surface. The regression set is the
+defect taxonomy applied to the artifact. An absent row is the
+lens-selection failure made visible>
+| lens | ran? | verdict | evidence |
+|---|---|---|---|
+| mechanics | yes | tokens resolve, sort orders correctly, controls live | resolve-probe output; AGEH sort trace; click log |
+| emphasis | DECLARED: no ladder existed at spec time — the audit that would have caught ghost-CTA had no input | | |
+| taxonomy-regression | yes | stranded-CTA class found on Download | row: ghost-variant `gh-btn` vs spec primary |
+
+## Emphasis audit
+<the three loudest painted elements vs the spec ladder's top three —
+painted hierarchy compared to intended hierarchy, per surface.
+Mismatch = finding. Named sub-checks: primary action painted top-1;
+proof signals above attribution; no rank-1 element painted quiet;
+decision-role data never below attribution-role data (the inventory's
+`data role` column supplies the roles — a painted inversion is a
+spec-internal contradiction made visible). When the spec called for
+multiple concepts, the audit runs PER CONCEPT — one painted ranking
+per concept, not one for the set. When no spec ladder exists, the
+audit names the intended top-3 from the member questions and audits
+against those>
+| surface | painted top-3 | intended top-3 | verdict |
+|---|---|---|---|
+| downloads row | Upload (sole saturated accent) / name / filter tabs | Download / name+proof / meta | mismatch — F-12 accent spent on the wrong persona's button |
+
+## Question verdicts
+<one row per spec ## Member questions row: `answered by <element>`
+or `unanswered — finding`. A spec question with no answering
+element is a finding by construction. When no spec section exists,
+the member questions are derived from the ask and answered the same
+way>
+| question | verdict |
+|---|---|
+| what do I need first? | unanswered — required framework mod sits last under "Newest" — F-19 |
+
+## Distance-to-referent   (required when the Interpretation names a referent/exemplar —
+   shipped surface vs the captured referent AT THE SAME REGISTER,
+   region by region: "what breaks the resemblance" — not only "what's
+   broken". A surface can be defect-free and still sit registers away
+   from the referent it claimed; D12's bar-axis mismatch lives here.
+   Each row names a chrome region and the observable gap)
+| region | referent reads | shipped reads | the gap |
+|---|---|---|---|
+| media tile | photographic payload | flat vector scene | register mismatch — anatomy adopted, load-bearing trait overridden |
+
+## Capture scrutiny   (required when captures were verified — every
+   verified capture carries the region-list it was scrutinized
+   AGAINST: header seam, rail junction, tab row, content edge, the
+   specific places defects hide. A capture "reviewed" with no named
+   regions is a browse — the messages header-overlap shipped inside a
+   verified screenshot because no seam was ever named)
+| capture | regions scrutinized |
+|---|---|
+| msgs-1440-top | header/bubble seam, context-rail junction, composer edge |
+
+## Risk re-check   (required when the spec carries ## Risk register —
+   one row per register entry, re-graded against the shipped evidence:
+   `open` (not yet evidenced), `triggered` (the evidence arrived — a
+   finding by construction), `cleared` (named counter-evidence),
+   `accepted` (user dispositioned). A triggered row with no
+   disposition blocks clean exactly like an open finding — the spec's
+   own predicted failure cannot ship beside its own prediction)
+| risk (from spec) | verdict | evidence |
+|---|---|---|
+| SVG art reads clip-art | triggered — every media tile flat-illustrated | pn-index-1440 |
+
+## Revisions
+<for authored elements (not lifted real DOM): v1 → what changed in
+v2 and why, or `v1 held — <what it was compared against>`. Zero
+revision evidence on authored elements is a finding — single-shot
+composition is banned in AGENTS.md; this row is the step that makes
+the ban auditable>
+| element | v1 | what v2 changed |
+|---|---|---|
+
+## Exemptions
+EXEMPT: app/ui/lib/json.js — logic-only change, renders nothing.
+
+holistic: <the whole read at composition zoom — does the surface
+   hang together as one designed thing (regions, rhythm, weight),
+   not the row list. The verdict the composition earns: AT-BAR /
+   BELOW-BAR + the one-line why>
+micro: <the close read per element — execution quality at pixel
+   zoom (type, spacing, borders, states), not the overview. Same
+   verdict + the one-line why. A verdict at only one altitude is
+   the half-read the interrogation exists to catch>
+```
+
+- **The artifact is a live ledger, not an epilogue.** Rows land as the
+  critique happens — coverage when the surface is shot, findings when
+  they're named, verdicts/scrutiny as repaints finish. A single-burst
+  write at wrap-up is paperwork filled to pass the gate, and it is
+  detectable: the tracker counts artifact writes against UI edits and
+  `BACKFILL` flags a one-pass artifact. Keep the file open; append per
+  pass; the ledger should grow the way the work did.
+- **The spec is the pre-composition half of this cycle.** For
+  rendered-surface changes, `13-design-spec.mdc` requires
+  `.unlazy/design-spec/<sid>.md` (exemplar → concept → grammar →
+  inventory → open calls) to exist *before* the first UI edit — the
+  decisions live there so generation transcribes them. This artifact is
+  the post half: what the surface became.
+- **`## Deltas` is the convergence loop made auditable.** Required when a
+  design-spec governs the change (i.e. `.unlazy/design-spec/<sid>.md`
+  exists). Render the artifact next to the spec's exemplar and enumerate
+  every remaining difference **bidirectionally** — moves the exemplar
+  makes that the artifact missed, and moves the artifact made that the
+  exemplar wouldn't. Comparison is *property-level* (voice rank present?
+  accent budget held? whitespace separating? micro-copy doing social
+  work?) — never appearance-cloning, which carries the exemplar's
+  assumptions into the wrong context. Every row ends defended (`deliberate
+  — <why>`) or as an open finding; an undefended delta at stop is the
+  divergence list left un-closed.
+- **`## Predictions` is the falsifiability half.** One row per rendered
+  coverage cell, written before the capture: the state you expect to
+  see. A difference between `predicted` and `observed` is a finding by
+  construction — and a column of "as predicted" is the evidence the
+  inspection was calibrated, not browsed. Rows may only read "as
+  predicted" where the observation could actually have contradicted
+  them; a prediction that can't fail is not a prediction.
+- **`## Budgets` makes density countable, not felt.** When a spec
+  governs, the exemplar's equivalent surface is measured — sections,
+  interactive elements, scroll columns, saturated accents, native
+  controls — against the new surface's. Exceeding the exemplar's budget
+  is a structural finding that can't be argued away: "board detail has
+  4 jobs, mine has 10" is arithmetic, not taste. This is the check that
+  converts "does it feel cluttered" (which I can't judge) into "does
+  it count cluttered" (which I can).
+- **`## Options` replaces the verdict where latitude exists.** When
+  the spec's Open calls flagged a chrome-class or identity decision,
+  this section carries the rendered alternatives — each with its
+  tradeoff and a recommendation, not a declaration. Generating variety
+  doesn't need the perceptual organ; picking does — so the options are
+  real renders and the pick is stated as a recommendation the user can
+  override, never as a self-issued verdict of "best."
+- **`## Distance-to-referent` makes "generic" falsifiable.** Findings
+  name what's broken; this section names what fails to resemble — the
+  shipped surface diffed against the captured referent at the same
+  register, region by region. A clean findings table beside a
+  register-wide gap is the "defect-free but bland" signature: the
+  badness lived between the checks, so the check now lives there too.
+- **`## Capture scrutiny` names where the defects hide.** Every
+  verified capture carries the region-list it was checked against —
+  header seam, rail junction, tab row, content edge. The v3 messages
+  header-overlap shipped inside a verified screenshot; "the capture
+  was reviewed" without named regions is exactly how that happens.
+- **`## Risk re-check` fires the spec's own alarms.** The spec
+  predicted its failure modes in prose; the review re-grades every
+  one against shipped evidence. `triggered` with no disposition is
+  an open finding — the product cannot pass a review that walks
+  past the spec's own named risk.
+
+- **`## Unverified` is the calibrated remainder.** Every artifact
+  ends by naming what was not exercised: the personas not rendered,
+  the states not reached, the viewports not shot, the surfaces the
+  ledger listed but the pass didn't cover. "none" is a legal entry —
+  and it is a claim the coverage table must bear, because a matrix
+  with empty cells and an "unverified: none" is arithmetic that fails.
+  This section exists because the most dishonest shape a report can
+  take is confidence over unrendered surface area.
+- **`## Hypotheses` exposes the examined-and-cleared space.** Findings
+  show what was found; the hypothesis log shows what was *asked* — the
+  questions posed and their resolution (`found` / `cleared` /
+  `unverifiable` with the reason). Suspicion-driven review only verifies
+  what it already suspects, so the defect count alone can never reveal
+  the size of the unexamined space; the question list can. Required on
+  every artifact — "none" is not a legal entry, because a critique that
+  asked zero questions was a browse, not an analysis
+  (`15-analysis-depth.mdc` §6).
+- **`## Constraint check` is the compression detector.** The ask is
+  re-read verbatim at review time and each constraint gets a verdict —
+  `carried` (where it landed) or `dropped` (the finding it raised).
+  Method constraints ("identical", "standalone", "each", sizes,
+  exclusions) are the ones that die between reading and planning —
+  content asks survive compression, method asks mostly don't — so
+  they get checked row by row, not as a vibe. A check that finds a
+  drop names it as a finding; it is never re-worded around. The
+  constraint ledger (13-design-spec `## Constraint ledger`,
+  15-analysis-depth § constraint ledger) is what this section diffs
+  against — for un-spec'd work the constraints are extracted from the
+  ask at review time.
+- **`## Lenses` makes review passes enumerable, not self-selected.**
+  One row per lens — mechanics, emphasis, domain-completeness,
+  stranger, taxonomy-regression — each with a verdict or
+  `DECLARED: <why not run>`. Left to choose, the lenses that run are
+  the provable ones and the judgment lenses quietly skip — the
+  mechanics-only-review failure this section exists to catch.
+  Independent eyes supplies the stranger lens on self-produced work;
+  the taxonomy-regression lens is the defect taxonomy applied to the
+  artifact — a named class the user's already reported re-firing on
+  your own elements is the worst finding shape.
+- **`## Emphasis audit` converts "feels flat" into arithmetic.** The
+  three loudest painted elements vs the ladder's (or the member
+  questions') intended top three — rank-order vs rank-order. Named
+  sub-checks: primary action painted top-1; proof signals above
+  attribution signals; no rank-1 element painted quiet. The ghost
+  Download beside a saturated Upload is what a missing audit ships:
+  "rank-1 element painted at rank 4" is a finding you can check;
+  "feels weak" is one you can't.
+- **`## Question verdicts` closes the spec's contract.** One row per
+  spec `## Member questions` row — `answered by <element>` or
+  `unanswered — finding`. The spec asked "what do I need first"; the
+  product buried the answer last; the mechanical join is what makes
+  the question a gate instead of notes.
+- **`## Revisions` is the single-shot ban's step.** Authored elements
+  carry v1 → what v2 changed (or `v1 held — <what it was compared
+  against>`). It doesn't force revision to happen — it forces its
+  absence to be visible, which is the only thing a rule can do to a
+  step that happens inside generation.
+- **Resemblance is a delta class too.** The check runs on sameness as
+  well as difference: where an element owed this surface its own
+  expression, a row reading `mine` = the exemplar's expression is itself
+  a delta to defend — `deliberate — <why this domain wears the
+  exemplar's clothes>` — or it is costume, not convergence. *Mechanisms
+  transfer* (the why: a shaped anchor, left-edge rhythm); *expressions
+  get authored* (the what: a date tile, not the vote box redrawn). A
+  zero-delta table is not a pass — the exam question is whether the
+  surface originated its own identity at the exemplar's level of
+  deliberateness (user calibration 2026-11-03).
+- **And defended departure is convergence, not divergence.** The
+  verdict column already licenses it: a row closed `deliberate —
+  <why>` is a decision made, not a failure to match the exemplar.
+  The bar is the *level* — deliberateness, unity, completeness,
+  honesty — never the vocabulary: a surface may speak a different
+  language than the exemplar's where its concept calls for it
+  (user calibration 2026-11-03: "even the design language doesn't
+  have to match"). Undefended sameness is costume; defended
+  difference is authored design; undefended difference is drift.
+
+- **A required section with no body is not a section.** `## Predictions`,
+  `## Options`, `## Unverified`, `## Budgets`, `## Deltas`,
+  `## Hypotheses`, `## Constraint check`, `## Lenses`,
+  `## Emphasis audit`, `## Question verdicts`, `## Revisions`
+  present as bare
+  headings fail the gate — write the real rows or the honest `none —
+  <why>`. The heading alone is the avoided-the-question shape.
+- The `## Interpretation` block is required on every artifact — it is
+  the outcome-sentence and referent-identification steps made auditable
+  (see the protocol above). Write it before the first fix, not after: it
+  exists to surface a misreading while it's still cheap. `outcome` is
+  the stated goal the checklist may not replace; `referent` names the
+  real thing the words point at; `exemplar` names the concrete class
+  generation is conditioned on. For changes with no appearance claim
+  (relocations, wiring), `outcome: none — mechanical` +
+  `referent: none — mechanical` + `exemplar: none` is the honest
+  entry. One `ask` line per user request the session answered.
+- Every UI source file the session touched appears: a coverage row or an
+  `EXEMPT: <path> — <reason>` line. An exemption is an auditable
+  assertion (e.g. logic-only refactor with zero visual effect); silence on
+  a touched file fails the gate.
+- "No findings" is a valid outcome **only** with complete coverage — say
+  it explicitly. Absence of findings without enumeration is exactly the
+  old failure shape.
+- The artifact is for the user too: it must be scannable in under a
+  minute so coverage can be spot-checked without opening the app.
+
+## Report scoping — what a claim may cite
+
+- **Pre-flight before reporting.** Enumerate the top-5 most likely user
+  complaints in plain words (`## Pre-flight` in the artifact). A
+  complaint you can predict and ship anyway is a defect laundered into
+  a bullet — fix it or dispute it, never just list it.
+- "Verified" names the check: which actor, surface, viewport, state.
+- **Verdict vocabulary is banned in self-reports.** "At the bar",
+  "polished", "deliberate", "designed", "matches the board", "same
+  level of quality", "genuinely good", "verified clean" applied to
+  your own work are the user's words to earn, never yours to issue —
+  and a standalone mockup or `.unlazy/` render is not an exemption;
+  the surfaces with no gate watching them need the discipline most.
+  The honest terminal state is *evidence + weakest-area-named*:
+  coverage rows, findings, the honest weakest region — the user
+  supplies the verdict. A report needing the adjective is a report
+  whose evidence isn't carrying it.
+- Design-quality claims ("looks good", "polished", "matches the member
+  side") cite the artifact path — and only stand if the artifact exists
+  with real coverage.
+- Mechanical results (build passes, tests green, zero console errors) are
+  reported as mechanical results — never as design verdicts.
+- **Blocker-class findings cannot ride open into a done report.** A
+  dead surface, an invisible interactive state, wrong-product text, or
+  a silently-failing flow is a P0 — it closes the surface it lives on.
+  An `ACCEPTED:` on a blocker-class finding must cite the user's
+  explicit agreement this session; self-acceptance does not exist.
+- **Two lints run in the code pass:** wrong-noun grep — every
+  user-facing string checked for a different feature's name
+  ("Discussion board settings" in the community editor is the case) —
+  and native-control grep — `<select>`, default checkboxes/radios where
+  house primitives exist. Both are mechanical greps that caught real
+  defects after they shipped.
+- If the critique ran thin or was skipped, say so plainly with the probe
+  that was skipped. An honest "unreviewed" beats a confident "reviewed."
+
+## What the hook does not cover
+
+The gate sees `edit`/`write` tool calls on UI source paths. It cannot see
+work done through other channels, and `stop_hook_active` allows a second
+stop attempt (loop guard — the bypass is visible in the transcript, not
+silent). Both gaps are deliberate: the gate makes skipping the critique a
+recorded act, and this rule makes it a violation. Honest work needs the
+artifact either way.
+
+## The defect taxonomy — the standing regression set (append-only)
+
+User-reported defect classes accumulate here. Every fresh look
+re-walks this list; missing a class the user already named is the
+worst failure — worse than missing anything new. Add a class the
+session the user names it, with its detector:
+
+| defect class | the detector that should have fired |
+|---|---|
+| chrome fidelity — shell doesn't match the real app | provenance tri-classification: real-dumped DOM + full stylesheet manifest, not resemblance |
+| unthemed chrome — scrollbar, selection, focus, cursor | invisible-by-default checklist (Pass 0) |
+| generic controls — template-default shapes | bootstrap test + plain-render pass |
+| dead controls — rendered interactives with no behavior or boundary | liveness ledger + probe deadCandidates |
+| illegible data-viz — meaning hover-only or absent | naive-viewer pass: "what does the stranger think this is" |
+| stranded controls — action/filters outside the reading path | naive-viewer pass: "where is the action" + measure-vs-frame decision in spec |
+| accent inconsistency — two hue systems on one surface | resolved-value check on every `--app-*` consumed |
+| invented classes under real names | provenance tri-classification — invented is declared, not dressed as real |
+| geometry-not-paint — DOM styled, pixels wrong | element-crop pixel verification |
+| unlabeled interactive — affordance invisible at rest | naive-viewer + state-space "at rest" column |
+| missing states — loading/error/skeleton absent | state-space enumeration in spec |
+| verbatim-lift-as-verdict — real component's trade-offs unexamined | element scrutiny: does the lifted rest state read on THIS surface? |
+| plausible-cause assertion — narrated root causes | cause traced to file:line before a finding may be reported |
+| flat-emphasis — different jobs painted at the same weight | emphasis audit: painted top-3 vs ladder top-3; the surface's message is "nothing here matters" |
+| buried-proof — strongest decision signal painted quietest | emphasis audit sub-check: proof signals above attribution ("3,411 downloads" as the faintest text) |
+| costume-collision — same costume, different semantics | naive-viewer pass: are two elements wearing one shape read as one thing? (type pill vs status pill; link-blue inert span) |
+| buried-required — what the member needs first positioned last | question-verdicts row: "what do I need first?" answered by which element and where it sits |
+| broken-truncation — cut text reading as a bug, not a design | edge-content cell + stranger pass: `—…` mid-sentence, separators dangling on wraps |
+| invented-under-lookup — authored classes while real vocabulary sat one grep away (distinct from "invented classes under real names" above: that one is dressing invention as real — provenance dressing; this one is never searching for the real at all) | spec vocabulary column: `real class found — <name>` or `declared invented` per element type |
+| silo-sort — control promising global order, delivering per-group order | sort probe across group boundaries: does "Newest" surface the actual newest row? |
+| concept-collapse — concepts varying ≤1 axis | spec Directions axes column: ≥2 distinct axes across the set, or a defended one-dimensional space |
+| aesthetic-floor — the whole surface sits below its class bar while every mechanical check passes (generic chrome, clip-art payload, void-island, mean-register template) | distance-to-referent section: ≥1 named referent + region rows; eyes verdict floor vs spec bar-floor; tonal/density arithmetic where computed |
+| register-sameness — every page stamped with one shell + one chrome + one media register regardless of the page's job | per-page center-of-gravity check: does this page's shell serve ITS eye-anchor, or just repeat the template? |
+| risk-never-refired — the spec named the failure and shipped it anyway | risk re-check rows: every spec risk re-graded; triggered-without-disposition blocks clean |
+
+## Ambition floor — the review's share (A4, A8)
+
+The review artifact must reach the whole enumerated universe, not only the
+repainted delta (`UNIVERSE-VERDICTS`): every surface stem named in the
+spec/analysis universe table gets a verdict row or `defended — <property>`.
+A `CLOSURE:` line naming a surface-set ("each tab", "all pages") owes ≥2
+surface cites (`UNIVERSE-CLOSURE`) — the umbrella keep, one layer down.
+Both stop-gate enforced under `AMBITION-FLOOR`.

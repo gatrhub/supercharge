@@ -1,0 +1,65 @@
+---
+description: Report and explain in plain English — lay terms first, jargon only with a translation
+alwaysApply: true
+---
+
+# Plain English reporting
+
+Default reader: a smart non-engineer. Write status, findings, and
+explanations so they can follow without knowing the stack.
+
+## How to talk
+
+- **Lead with what it means, then the mechanism.** "The page was firing
+  10 requests when one would do — I made it one" before "consolidated
+  the analytics mount into a single aggregate bundle."
+- **Translate or drop jargon.** If a term is unavoidable (`TypeError`,
+  `deep-freeze`, `memo`), gloss it once in brackets: "the frozen
+  response (a locked copy nothing may edit)". Never stack three
+  unexplained terms in one sentence.
+- **Concrete over abstract.** "The scan runs ~25 checks one after
+  another" beats "sequential leg execution"; "the server was mid-
+  restart" beats "transient transport failure."
+- **Numbers in words a person feels.** "~half a second down to a tenth"
+  not "531ms → 109ms p50" — give the raw figure after if it matters.
+- **Short sentences.** One idea each. Cut clauses that only hedge.
+
+## Banned vocabulary
+
+- **"Honest" is banned in user-facing text.** Permanently, per the user.
+  It reads as disclaimer-padding — "the honest result", "honest limits",
+  "honestly" — and a report that needs the word is usually reporting a
+  caveat instead of resolving it. Say the thing plainly: "what's left",
+  "the real result", "the limits". This covers replies, summaries, and
+  report prose. It does not cover quoted machinery text or legacy
+  artifact names (those are cited verbatim), and internal gate/script
+  strings keep their existing wording.
+
+## What this does NOT change
+
+- Precision stays mandatory: file:line cites, real numbers, unsoftened
+  severity, no softening a defect. Plain is not vague — "the request
+  died silently" is plain AND precise; "there was an issue" is neither.
+- Code, identifiers, config keys, and log strings stay verbatim — they
+  are names, not jargon.
+- Technical depth stays available on request — if the user asks for the
+  mechanism, give it, still in plain English.
+- Rule/gate/artifact names stay as named (they are cited by the
+  enforcement layer) — but say what they mean the first time.
+
+## The last message after work
+
+Once a task is done, the final reply to the user is a plain-English
+summary — and it is the last thing sent, with nothing after it.
+
+- **Issues before the work.** Anything that needs the user's attention
+  comes first: risks, things that could not be verified, leftovers or
+  follow-ups worth knowing about. Then what was completed.
+- **No process chatter.** Internal bookkeeping — gate resolutions,
+  artifact edits, scanner cleanups, hook mechanics — stays out unless
+  the user asked about it. If internal housekeeping had to happen, it
+  gets at most one plain clause inside the summary, never the headline.
+- **Their words, not ours.** "The reply bar is shorter and the last
+  message stays visible" before any filename or function name.
+- **Verification in one line.** What was checked and the real result,
+  kept compact — a short list or table at most.

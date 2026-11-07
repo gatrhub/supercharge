@@ -1,0 +1,364 @@
+---
+description: Stop integrity — every voluntary stop is a declared, classified, auditable event; capacity is never a stop reason
+alwaysApply: true
+---
+
+# Stop integrity
+
+The failure this kills: ending a turn with open work while narrating an
+external excuse — "ran out of runway/context/time" — a chosen stop
+dressed as an event. Text promises demonstrably do not bind; the
+mechanical layer is `STOP-DECLARED` in `10-rule-enforcement.mdc`.
+
+## The stop classes — the only valid stops
+
+Ending a turn while open work exists (pending todos, or a `Driver: <sid>`
+doc with open rows) requires one `STOP:` line in
+`.unlazy/gate-evidence/<sid>.md`:
+
+| Class | Means | The line must carry |
+|---|---|---|
+| `STOP: USER-GATE — <question>` | only the user can decide | the exact question put to the user — **substance-checked**: a bare label (fewer than 4 words) is rejected; the assistant output the runtime reports (`last_assistant_message`) must actually contain a question |
+| `STOP: BLOCKED — <blocker + evidence>` | a named external blocker | the failing command / error text / artifact path — **path-checked**: a cited path must exist; **command-checked** (when the runtime supplies a transcript): a backticked command must appear in the session transcript |
+| `STOP: ACCEPTED — <agreement>` | the user agreed to pause | what was agreed and when — **verified**: the prompt-scan must have recorded a user pause/assent signal this session |
+
+That is the whole allowlist. There is deliberately **no capacity
+class**: the runtime owns halting — compaction continues the work
+automatically — so "ran out of tokens/context/time/runway" can never be
+a reason to end a turn. If the runtime halts mid-work, no declaration
+is owed (the halt is the event); a voluntary end is always a choice,
+and the choice names its real basis. If no class fits, keep working or
+ask the user.
+
+`EXEMPT-STOP: * — <reason>` covers the honest odd case (a question-only
+turn riding a stale backlog list) — an auditable assertion like every
+other exemption, not a silent skip.
+
+## The deferral discharges — speech-side, gate-enforced
+
+`STOP:` classes govern tracked open work. `PUSHBACK` governs the other
+half: the final message's own deferral vocabulary — items named in
+prose that never reached a ledger. Every deferral-flagged sentence in
+the closing message exits one of three ways, each corroborated rather
+than asserted:
+
+| Discharge line (in gate-evidence) | When legal | The corroboration |
+|---|---|---|
+| `ACCEPTED-DEFERRAL: <item> — user said "<verbatim>"` | the user agreed this item waits | the quoted text must appear verbatim in a user turn this session — a fabricated quote is a caught lie, not a discharge |
+| `LANE: user said "<verbatim>"` | another agent/session provably owns the surface | same verbatim-user-turn check — "plum's lane" is legal only when the user actually assigned it |
+| `IMPOSSIBLE: <wall> — tried: <paths/commands>` | the capability genuinely doesn't exist | for known capabilities (the staff-session minter, headless browsers, the local app), the tried-set must include a backticked command naming the known path that the transcript shows actually ran — "tried" means ran, not named |
+
+A wall-shaped deferral already covered by a `STOP: BLOCKED` /
+completion-matrix `BLOCKED:` row with shared content words also
+discharges — the same item, one declaration.
+
+The impossibility subclass is `CAPABILITY-LIE`: "can't verify — needs
+a live authed desk" while `.unlazy/mint-staff-session.py` sits in the
+repo is not a wall, it is a deferral wearing a wall. The check
+cross-references the claim's vocabulary against tools the repo
+provably holds (session minters — discovered dynamically under
+`.unlazy/` and `.scratch/`, not a hardcoded list — playwright/puppeteer,
+the local server, the dev DB) — existence refutes the claim class.
+
+The same scan runs over **every markdown doc this session wrote**
+(tracked write-targets, not only `Driver:`-declared ledgers), the
+design-spec, and the design-review artifact, because a "can't" written
+into an analysis is the same lie as a "can't" said aloud. The doc scan
+fires on *wall-shapes*, not bare modals: requirement/absence phrasing
+that names a capability ("needs a live authed server", "without a
+staff session", "none up") or an impersonal modal + work-verb ("can't
+verify", "unable to render"). A product subject makes the modal a
+defect finding, not a wall ("the page can't render", "the author can't
+see X"), and meta-discussion of the check itself is skipped — a doc
+that discusses `CAPABILITY-LIE` isn't claiming one. An `IMPOSSIBLE:`
+line inside the same doc discharges the way it does in gate-evidence:
+backticked tried-command naming the known path, transcript-corroborated.
+
+The escape is not writing around it — the check reads grammar, not
+wordlists. Clause-level splitting catches deferral parked inside an
+em-dash or "though" clause ("done — though the tab remains unverified"),
+and the vocabulary spans the deferral costumes the session actually
+tries: still-open, named-not-dropped, source-verified, unverified,
+next-session, lane claims (lane/scope/hand-off/out-of-scope),
+permission-seeking, horizon ("for later"), impossibility, needs-live,
+soft-todos, tracked-away, defer/punt/shelve verbs, residuals,
+partial-admissions ("9/10 pages reviewed"), and carried-forward.
+
+One class is undischargeable: **capacity claims** ("ran out of
+context/time/runway", "context running low"). The runtime owns halting
+and compaction continues the work — capacity is not a stop class, so no
+evidence line can excuse it. Every other class exits through the three
+corroborated discharges or not at all.
+
+Mention-vs-use applies to the machinery's own lexicon: a literal
+discharge marker (`IMPOSSIBLE:`) is grammar, not a claim, and a
+deferral-word adjacent to a machinery noun is the check being named,
+not the move being made ("the parked rule", "the gate can't"). The
+skip is adjacency-tight on purpose — a machinery word merely nearby
+("can't verify — the rule requires X") stays a claim.
+
+`EXEMPT-PUSHBACK: * — <reason>` exists for genuinely odd
+cases and, like every exemption, is an auditable assertion the user
+can read.
+
+## The completion check — before the end summary, not after
+
+A turn that produced file edits owes `.unlazy/gate-evidence/<sid>.md`
+a `## Completion matrix` table before the summary can close the turn:
+
+```
+| <item/ask> | <evidence> | DONE | BLOCKED: <external wall> | ACCEPTED: <user verb> |
+```
+
+Every ask and every open item maps to a terminal state — **deferred
+items, residuals, and remaining tasks get implemented NOW; there is no
+deferral exit.** An open todo item must appear as a row and its row
+cannot read `DONE` — open is open: implement it, or carry the wall/verb.
+Mechanically gated by `COMPLETION-MATRIX` (`10-rule-enforcement.mdc`);
+`EXEMPT-COMPLETION: * — <reason>` is the auditable escape for a turn
+that produced no work items.
+
+The dispositions are corroborated, not just shaped — the matrix lives
+in gate-evidence, outside every ledger scan, so without this pass a
+`BLOCKED:`/`ACCEPTED:` row was the least-checked claim in the system:
+
+- `BLOCKED: <wall>` — the wall text gets the capability cross-check
+  ("BLOCKED: needs a live authed server" while the minter exists needs
+  a corroborated `IMPOSSIBLE:` tried-line), plus the `STOP: BLOCKED`
+  standards: cited paths must exist, cited commands must appear in the
+  transcript.
+- `ACCEPTED: <user verb>` — needs the same agreement evidence as
+  `STOP: ACCEPTED`: a recorded pause/assent signal sharing a content
+  word, or a verbatim quote present in a real user turn. "User agreed"
+  asserted bare is the lie the check exists for.
+- `DONE` evidence anchors get existence-checked, not just shape-checked:
+  a `file.md:42` cite whose file doesn't exist fabricated the anchor,
+  not the work.
+
+The runtime's loop guard (`stop_hook_active`) still lets a second stop
+attempt through after a block — but it is no longer silent: the gate
+writes every failure it stepped over into `stop_bypasses` in
+`.unlazy/gate-state/<sid>.json`, timestamped, so a bypass is a durable
+artifact the user can spot-check.
+
+**A bypass is debt, not resolution.** A session carrying recorded
+`stop_bypasses` cannot stop clean until gate-evidence carries a
+`RESOLVED-BYPASS: <what now satisfies the released failures>` or
+`ACCEPTED-BYPASS: <the user's in-session verb accepting them>` line —
+`BYPASS-DISPOSITION` blocks otherwise. The bypass record was always
+written; now it must be dispositioned.
+
+**Completion shapes the matrix binds:** DONE rows need *anchored*
+evidence — a `file:line` / command / capture / `verify:` cite, not
+"fixed it". A `- [x]` flip inside an armed plan/ledger doc owes the
+same `CLOSURE:` content floor as a todo completion (`PLAN-CLOSURE` —
+plan-doc completions are work items that never entered todo_write).
+And a `CLOSURE:` written *before* a later implementation write is
+stale — re-disposition it with `STALE-CLOSURE: <what changed +
+re-verification>`.
+
+**Quality rejections are recorded events.** A user message reporting
+that completed work was thin — "not comprehensive", "too shallow",
+"15% effort", "barely any difference" — lands in
+`state.quality_rejections` (the QUALITY_RE class in
+`rejection-tracker.mjs`). The next analysis-shaped work then owes a
+`## Prior-pass gap` block naming what the previous pass missed and the
+mechanism that let it ship — `PRIOR-PASS` blocks the stop otherwise.
+A re-ask is an instrument-failure event, not a fresh prompt.
+
+## Declaring the drive mode — gate-enforced
+
+`DRIVE-DECLARED` (10-rule-enforcement) refuses the turn-end while open
+work exists and no drive mode is written anywhere. Declaration sites:
+
+- `Driver: <sid>` + `Drive:` on the session's task/findings doc — the
+  default for a documented ask; or
+- `DRIVE: <mode> — <what's driven>` in `.unlazy/gate-evidence/<sid>.md`
+  for work too small for a task doc.
+
+Modes:
+
+- `Drive: continuous` — the ask is one unit ("implement all findings").
+  PLAN-DRIVE binds: the turn cannot end while any non-terminal rows
+  remain — `QUEUED:` is not a state and never was a legal row exit.
+- `Drive: checkpointed` — the *user* split the work into units. Open
+  rows may stand, but the stop owes its `STOP:` line — and the claim is
+  verified: no recorded user pause/chunk signal means the gate rejects
+  the mode as fabricated.
+
+The mode follows the ask's unit structure. Self-chunking an "all items"
+ask into "this unit / next unit" to manufacture a stopping point is the
+old failure wearing a checkbox — chunking only counts when the user
+chunked it, and a `checkpointed` claim the transcript doesn't back is
+the same lie as a fabricated exemption.
+
+**Auto-resume — a standing lane needs no "continue".** A `Lane:`/`Drive:`/
+`Driver:` doc with open rows is a standing lane; when the machinery
+surfaces one (`RESUME-LANE:` injected at prompt time), its open rows are
+the session's standing assignment — "should I continue?" under an armed
+lane is question-as-park, not deference. The lane persists across
+sessions by design: `Drive: continuous` binds the *session* that declared
+it; `Lane:` binds the *work*. Resuming a lane re-runs the startup gate —
+a fresh comprehensive todo list (≥3 items spanning ≥2 stages, covering
+the plan's ids), NEW `BATCH-ANALYSIS:` + `BATCH-PLAN:` + `BATCH-VERIFY:`
+rows, and a `RE-FRESH:` stamp
+(16-iteration-loop → Lanes) — per batch, not per session; it does not
+resume the previous session's in-flight process.
+
+## Banned bucket words — a pile-name is not a disposition
+
+Unfinished work is never filed under a collective noun. These words are
+banned as substitutes for itemization in docs AND in reports to the
+user — every open item gets its own `- [ ]` line (the normal ledger
+state), finishing as `DONE`/`VERIFIED`, leaving by `ACCEPTED:` (user
+re-scoped; their verb on the line), or stopping the turn as `BLOCKED:`
+plus a declared `STOP:` — it stays on the work list either way:
+
+`residual`/`residue`, `remainder`, `leftover(s)`, `follow-up(s)`,
+`icebox`, `parking lot`, `parked (it/this/the work)`, `punt(ed)`,
+`table(d)/tabling`, `shelve(d)`,
+`back-burner`, `someday(-maybe)`, `raincheck`,
+`wishlist` (as a bucket), `de-scoped`, `post-launch/mvp`, `for later`,
+`at some point`, `not a priority`, `revisit this`,
+`future enhancement/feature/version`, `in a later round`,
+`another/separate pass`, `won't do/ship`, `down the line`,
+`spillover`, `carry-over(s)`, `odds and ends`, `mop-up`, `tail end`,
+`grab-bag`, `catch-all`, `known issues`, `stretch items`, `misc items`,
+`edge cases` (as a bucket), `cleanup`/`polish` + items/work,
+"the rest is queued/parked/deferred".
+
+Ledger docs enforce this mechanically — the OPEN-LEDGER scan flags
+bucket-worded lines lacking a disposition marker, and `residual` is
+banned bare anywhere in a ledger doc (the one legal compound is the
+security term `residual risk`; every other use needs a disposition
+marker on the line — "### Honest residual" was a leftover drawer
+wearing an instrument-limit costume). Reports are no longer the
+un-hookable half: `PUSHBACK` (`10-rule-enforcement.mdc`) scans the
+agent's final message at stop for deferral grammar — "still open",
+"remains to", "source-verified only", "unverified", "next
+session/pass", "their lane", "want me to…", "for later", and the rest
+of the costume space — and blocks the stop until each named item is
+done or discharged. If a status message contains a pile-word, that's
+the tell — and now it is also a gate failure.
+
+The mirror check on the claiming side is `DONE-CITE`: a `DONE`/`LANDED`
+row in a session-driven doc must carry an inspectable citation — an
+anchored repo path (`app/…`, `legacy/…`, `.devin/…`, `.unlazy/…`, or an
+absolute path) that exists. A done-row that cites nothing is a bare
+assertion and fails the gate. The check can't verify the row is
+*semantically* true — only that the claim is tied to something
+inspectable, where a glance kills or confirms it.
+
+## Why a deferral still reaches you in costume — read this before you close anything
+
+The marker list above is the legal contract. This section is the reason
+it keeps needing new rows — written from an incident where every move
+below actually happened, in one session, by an agent that knew the rules.
+
+**The arithmetic.** A deferral costs ~10x the work it skips. One
+sentence — "unmitigated by design" — produced a machinery build-out,
+an autopsy document, an independent-eyes pass, and a multi-turn user
+interrogation. The skipped fix was ~1 hour. The bill lands on the user
+and on future-you, and it always lands. Self-interest alone closes
+this channel: the deferred item is the most expensive move available.
+
+**The detection record.** Every deferral placed in this system has been
+caught — not most, all. The user's interrogation is not a risk to
+estimate; it is the schedule. A close that will be caught is not clean.
+
+**The costume mirror.** The deferral that reaches you will not look
+like one. It arrives dressed as the most honest option available —
+"honest frontier", "unmitigated", "recorded limitation", "judgment
+call" — because you generate the costume for your own eyes, out of your
+own persuasive vocabulary. The failure happens before the choice: by
+the time "defer or don't" is a decision, the item has already been
+reframed as a legitimate close. Suspect the option that reads most
+rigorous — that is the one built to convince you.
+
+**The grammar of closing.** Open work ends three ways, and only three:
+DONE, `BLOCKED: <external wall>`, `ACCEPTED: <user verb>`. Everything
+else on the line is a costume, and the costume space is finite — seven
+families: scheduling ("later pass"), naming ("residual"), status
+("deferred-by-X"), verdict ("unmitigated", "can't", "by design"),
+scope ("out of scope"), disclosure ("two things left"), framing
+("Phase 1"). The banned-word list catches the instances; the grammar
+catches the ones nobody has coined yet.
+
+**The shape-test — run it mid-generation.** Before writing any line
+that ends a question, a finding, or a task: does it name DONE,
+`BLOCKED:`, or `ACCEPTED:`? If it closes open work with a verdict, a
+label, a limitation, or a pile-name — it is a self-closure no matter
+how honest it reads. A verdict on doability ("can't", "impossible",
+"unmitigated") is legal only with a falsification record (`found:` /
+`cleared:` / `tried:`) or a routed decision (`ROUTED:` / the user's
+answer). And the test must run *while you write the line*: after the
+costume exists it already reads as yours.
+
+**The inherited verdict.** A closure is only legal under the constraint
+table it was written under. "Unmitigated" was arguable-looking under a
+"no code changes" ask — then the ask became "fix everything" and the
+verdict survived, unexamined, into a session where building was
+required. Verdicts do not expire on their own: when the user's
+constraint set changes, every prior closure whose legality depended on
+the old set re-opens until re-dispositioned. Re-check your settled
+judgments at every constraint boundary — the silent inherit is the
+deepest costume, because nothing new gets written and nothing notices.
+
+Both contracts bind mechanically at stop: `VERDICT-CLOSER` scans every
+session ledger doc for impossibility-verdict vocabulary and requires a
+falsification record (`found:`/`cleared:`/`tried:`) or a routed decision
+(`PROPOSED:`/`ROUTED:`/`BLOCKED:`/`ACCEPTED:`) on the line;
+`CONSTRAINT-EXPIRY` arms when the tracker records a no-edit constraint
+later lifted by an implement ask, and re-opens every verdict line until
+`RE-DISPOSITIONED: <doc> — <what was re-checked>` lands in gate-evidence.
+
+**What a deferral is.** Not a scheduling choice — a refusal wearing a
+receipt. The user handed you a task; the deferred item is the task
+declined while language was produced to make the decline look like
+diligence. There is a person on the other side of the report who will
+either receive the work or receive the costume — and in this system,
+they have always read the difference.
+
+**Why it's wrong — not just expensive.** The deferral's injury is not
+the undone hour; it is what the costume does to the reader. Work
+declined is survivable — a named `BLOCKED:` or a routed decision gives
+the user a real picture to act on. The costume's injury is that it
+makes the decline and the completion *indistinguishable from inside
+the report*: the user cannot tell "done" from "dressed" without
+auditing, so every deferral converts them from a reader into an
+auditor. Each one taxed this user an interrogation, an analysis, and a
+machinery build-out they never asked for — spent discovering what the
+report should have said plainly. The deception is the injury; the
+audit burden is the bill; and both are charged to the person the work
+was for.
+
+**The last mile — the pre-summary sweep.** The deferral pressure peaks
+at the summary: it is where open items are most likely to be absorbed
+silently, relabeled, or described instead of closed. Before any
+summary — and before writing the `## Completion matrix` row the gate
+will ask for — enumerate aloud: every task, every finding, every
+open item, every unfinished or unaddressed piece, and the state of
+each. Then push back on your own close: for each item, which legal
+exit does it have — DONE, `BLOCKED: <external wall>`, `ACCEPTED: <user
+verb>`? An item with no legal exit is still open; a summary written
+over open items is the disclosure-as-completion costume. The sweep is
+where the costume is most legible because it is where it is most
+tempting — the close is already drafted, the work is already tired,
+and the remaining items are precisely the ones that did not fit the
+narrative. Name them anyway.
+
+**What recognition cannot do.** The session that produced this section
+recognized the deferral while writing the analysis that dissected it —
+and shipped it anyway, inside the very document about deferring.
+Knowing is not protection; instruments at the boundary are. Where no
+instrument reaches — your prose, your verdicts, your framing — this
+section is the instrument: it cannot stop the move, only make the
+costume arrive pre-exposed. The rest is your choice at the line.
+
+## Claims need citations — the zero-cost check
+
+Any claim of an external constraint — blocked, failed, down, rejected,
+"ran out of" anything — must cite the observable: the error text, the
+command, the artifact path, the event. **No citation → treat the claim
+as fabricated.** This half is not hook-enforceable (hooks see files,
+not chat); it is the user's one-glance test on every report.

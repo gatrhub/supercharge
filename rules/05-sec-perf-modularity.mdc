@@ -1,0 +1,44 @@
+---
+description: Always-on security, performance, modularity, DRY helpers — never trade for delivery speed
+alwaysApply: false
+---
+
+# Security · performance · modularity
+
+Mandatory on **every** slice. Never trade these for speed of delivery. Plan: **§6** authz, **§9** security, **§10** perf, **§12** UI. File-scoped: `security-authz.mdc`, `performance.mdc`, `ui-modularity.mdc`, `modularity-backend.mdc`.
+
+## Security
+
+- Two planes: `staff authz plane` (staff) vs `app authz (tenant plane)` (group). Do not mix. Unknown catalog key = deny.
+- Fail-closed. **IDOR**: confirm `group_id` on every resource load, and check the permission you added — evidence is `file:line`, not a test run.
+- CSRF + Origin on cookie mutations. WS auth from session cookie — **no tokens in query strings**.
+
+## Performance
+
+- No blocking I/O on the request path.
+- Tenant-scoped queries **always** filter the tenant key. Cursor pagination. No N+1. No unbounded lists.
+- Request path: the fast serializer via `platform/core/json.py`, not stdlib `json`.
+
+## Modularity / quality
+
+- **DRY (strict, not always possible):** Before writing a new helper, **search** `docs/helpers-reference.md` (`app/platform/core/`, `app/ui/lib/`). Prefer **one** helper used in many places. If an existing helper almost fits, **widen it** (parameters, options) rather than a second copy. Repeated logic across features is a fail. Keeping the doc current: `04-rewrite-docs.mdc`.
+- Readable names, small functions, no god-files. New UI = feature module + `index.js`. CSS **variables** (`--app-*`), not Sass. Detail: `08-code-quality.mdc`.
+- Adapters: no business math. Features do not import features.
+- Ported legacy slices must be **stricter** than legacy (fail-closed authz, CSRF on mutations, IDOR, no N+1, tenant-key filters, fast serialization). Readable new code — not a paste of legacy with comments stripped.
+
+## Schema migrations (mandatory)
+
+**Any change to a DB-backed model (new column, new table, new index, altered constraint, new enum value) requires a migration in the same slice.** The agent creates the migration file, not the user.
+
+- Migration files live under `app/migrations/versions/` (or your tool's versions dir), chained on the current head — keep slugs unique inside a batch.
+- After writing a migration, the agent **runs the upgrade command itself** (`alembic upgrade head` or your stack's equivalent, `DATABASE_URL` set) — the user does not run migrations for you.
+- Verify: the migration tool reports the new revision at head.
+- **Never** ship a model change without its migration. A production `schema_lag` refusal because the migration was forgotten is a hard fail.
+- The agent must not ask the user to run migrations. The agent runs them.
+
+## Safe with more than one worker
+
+Production runs several worker processes. Anything one process keeps in memory is invisible to the others, and a restart resets it.
+- Counters, quotas, single-use tokens, one-time actions and pending approvals go in the shared-state helper (`platform/infra/shared_state`-equivalent), not module locals. Keep a process-local fallback only for when the cache is unavailable.
+- "Clear this cache everywhere" goes on a cross-process bus.
+- A process-state linter (or the discipline itself) fails on a new module-level empty dict/set/list without a declared reason.

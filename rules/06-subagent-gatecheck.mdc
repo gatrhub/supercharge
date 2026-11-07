@@ -1,0 +1,45 @@
+---
+description: Coordinator only — after a subagent reports success, re-read the critical source before telling the user it is done. Review table, send-back, what subagents owe.
+alwaysApply: false
+---
+
+# Subagent gate-check (coordinator only)
+
+Subagents are employees, not oracles. Assume their work can contain bugs, skipped steps, softened facts or a false "done". The coordinator owns the bar. **Subagent summaries are not evidence.**
+
+## After every "success"
+
+Before the user hears it is done, the coordinator (or a dedicated review worker whose job is the re-read) must:
+
+1. **Re-read** the files and lines the subagent cited **and** anything the user named (local files and links they gave), not only the files the subagent edited. Always spot-check user-reported symptoms and security / authz / boot claims against source.
+2. Check the **completion matrix**: every distinct user ask → evidence (`file:line` or a reproducible command). A missing row means not done.
+3. If the user said "all / every / look through / browse", check for a **path-opened** ledger. An index, file titles or a skip-list is not coverage.
+4. Reject "all fixed", "verify-only" or "steps 0–N complete" without `file:line` or a command. Distinguish read from executed.
+
+Never skip the gate-check to stay under the ceiling or to keep agents busy.
+
+## Review table
+
+| Check | Fail if… |
+|---|---|
+| Process | Few reads, then an early summary; every step marked done without evidence |
+| Coverage | An analysis with no ledger; "all / every" with no path-opened ledger |
+| Accuracy | Claims don't match source on spot-check, especially user-reported symptoms |
+| Softening | Conditionals watered down ("usually", "if X" when the code always does Y) |
+| Priorities | The user's reported bugs are missing while other topics dominate |
+| Scope | Edits outside the brief; an analysis-only run that patched code |
+| Verification | "Fixed" without acceptance criteria or retest notes; no completion matrix |
+| Quality | Bugs, UI/UX issues, security holes, copy-paste, or logic that should have used `platform/core` / `ui/lib`; a fix process below its risk tier (`08-code-quality.mdc`) |
+
+## Fail → send back
+
+Send a precise correction brief: what failed, what to keep, what to fix. Prefer a targeted correction pass when the structure is good but facts are wrong; ask for a full redo only when the process was a skim. Report to the user only after the gate-check accepts.
+
+## What subagents owe
+
+- Follow the brief methodically; do not shrink it into a skim.
+- Return evidence (functions, lines, commands), not impressions.
+- Do not edit outside scope.
+- Do not mark a step complete unless its acceptance criteria were met.
+- For analysis jobs, finish coverage before leading with a favourite bug.
+- For "all / every" requests, return a path-opened ledger.

@@ -1,0 +1,541 @@
+---
+description: Analysis depth — comprehensive-by-default analysis machinery: units, question-space, hypothesis log, independent eyes, traversal axes L1–L14, conduct record
+alwaysApply: true
+---
+
+# Analysis depth — comprehensive by default
+
+**The failure this kills:** analysis depth calibrated to the user's phrasing
+instead of the ask's class. "Do an extreme analysis" got effort; "do an
+analysis" would have gotten less — and both rode on one self-calibrated
+effort dial. There is no adjective a user can add that should change the
+machinery that runs, and there is no light tier of analysis.
+
+## What counts as an analysis ask
+
+Any request to evaluate, examine, diagnose, audit, review, critique, or
+explain what's wrong — "analyze this", "what's wrong with it", "audit",
+"assess", "why is X slow/broken", "how does X compare", plus any explicit
+depth vocabulary. Distinguish from *questions*: "what does this function
+do", "where is X defined" are questions — answer them, don't run machinery.
+
+## The evidence pass — before any causal claim
+
+The failure this kills: causal narratives composed from memory and
+plausibility. Two consecutive process-analysis answers shipped claims
+invented to fit a tidy framework ("the spec predates the recursion rule,"
+"my fix created the clip") that reversed on five minutes of checking —
+the spec was finalized 58 minutes *after* the rule, and the clip's
+arithmetic never added up. The ask was analysis; what shipped was
+narrative. "Analyze why X happened" is a claim-generation ask — the
+answer is only as good as the evidence gathered first, and gathering
+first is the step composition skips.
+
+Postmortem/process asks sharpen the trigger: "why did you", "why didn't
+you catch", "how did you miss", "analyze why/how X happened", "root
+cause", "diagnose", "analyze harder", "what went wrong" — and subject
+asks sharpen it the same way: "analyze my X", "review the auth flow",
+"audit the schema", "find bugs in Y", "how does X compare", "ways to
+improve Z". The `rejection-tracker` prompt hook injects the project
+protocol when the prompt matches — an armed analysis is not an option
+to notice.
+
+Protocol, every analysis ask, no tier below:
+
+1. **Evidence pass first.** Before any causal claim, gather the
+   artifacts the claim is about: file contents, mtimes (`stat`), git
+   log/diff, ledger/spec/script sections, recomputed arithmetic —
+   measure the numbers, don't estimate them. The evidence set is
+   enumerated in the answer (`## Evidence` or equivalent); an answer
+   whose claims outnumber its gathered artifacts is narrative.
+2. **Claims cite or tag.** Every causal claim carries its evidence —
+   `file:line`, timestamp, computed value, observed output — or is
+   tagged `INFERENCE:`. Untagged assertions about what happened are
+   violations, not style choices.
+3. **Timeline claims get checked.** Any assertion of sequence or
+   causation ("X came before Y", "the fix created this", "it predates
+   the rule") requires the mtime/diff/log actually read. Sequence is
+   the most-invented claim class; asserting it unchecked is the failure.
+4. **Findings before fixes.** Verified findings lead; fix proposals
+   follow, marked as proposals. A fix-list shipped on an unexamined
+   cause is the whack-a-mole failure — sensors for a mechanism never
+   established.
+5. **First-ask rule.** The *first* analysis answer must already be
+   evidence-dense — evidence pass run, claims cited or tagged. "Do the
+   framework first, gather if pushed" is the violation; needing a
+   second "analyze harder" means the first answer failed, not that the
+   bar moved.
+
+## The constraint ledger — before the plan
+
+First written act on any analysis ask — before the machinery plan:
+extract every constraint in the user's message **verbatim** (quoted,
+not paraphrased), tagged `content` or `method`. Paraphrase is where
+constraints die: "three standalone analyses" paraphrases to "three
+analysis files" somewhere between the ask and the plan, and the drop
+is silent — the instruction isn't refused, it's lost before planning.
+
+- **Method constraints are the fragile class.** Constraints on *what*
+  survive compression; constraints on *how* — standalone, identical,
+  separate, each, ordering, "not X" — are the first thing dropped. Each
+  `method` line carries its **check form** in the ledger: the mechanical
+  test that proves it held ("standalone → each doc readable alone, zero
+  cross-citations, N declared plans"). A method constraint that can't be
+  given a check is surfaced to the user in the plan — "this part rides
+  on judgment" — never absorbed into the work silently.
+- **The plan quotes the ask.** The machinery plan (and every plan/spec
+  artifact) carries the constraint lines as written. The user reads the
+  declared plan and sees a dropped constraint *before the work runs* —
+  that interception point is more reliable than self-monitoring, so it
+  is the designed catch.
+- **Enumerated asks are structural.** A count or "each/separate/
+  standalone" means N units get N plans, N executions, N reported
+  deliveries. One artifact with N headings is a violation, not a format
+  choice. Docs asked to stand alone may not cite each other for
+  legibility — a doc that needs a sibling to be understood was authored
+  as a chapter.
+
+## The machinery — every analysis ask, every time
+
+No tier below this exists. These items are the analysis, not optional
+strength:
+
+1. **Machinery plan first.** The analysis's first output block declares
+   which items below will run — with the constraint ledger's `method`
+   lines quoted verbatim — before the analysis executes. This is the
+   auditable shape for chat-only analysis (no gate can see a prompt; the
+   declaration is what the user holds it to). Same doctrine as the
+   design-spec gate: plan visible before work.
+2. **Declared universe + full enumeration.** Name the population being
+   analyzed (every element, file, state, flow — whatever the domain's unit
+   is) and walk all of it. Suspicion-driven checking — only verifying what
+   you already suspect — is the failure shape; the unsuspected space is
+   where the next defects live.
+3. **Complete context matrix.** Every state × every context the subject
+   occupies: surfaces get state × viewport × actor; code gets branch ×
+   error × boundary × permission paths; flows get actor × permutation.
+4. **Referent comparison rendered** when the subject imitates or competes
+   with a real artifact class — held beside the real thing, not asserted
+   from memory (09-design-review outcome→exemplar→kind protocol applies).
+   The referent is the subject's own source — its files, routes, and
+   renders examined this session. A prior analysis doc of the referent is
+   a lead, not the referent: a parity verdict whose referent side rests on
+   an earlier doc is half-inherited evidence (AGENTS.md), and the session
+   that leans on it re-examines the units the comparison actually uses.
+5. **Domain traversal.** Interactive surfaces: keyboard walk, focus order,
+   state-machine transitions, a11y pass. Code: error paths, edge inputs,
+   concurrency, permission boundaries. Data: the numbers recomputed against
+   the source they claim to describe.
+6. **Hypothesis log — mandatory.** The questions asked and what each
+   resolved to: `found` (with the defect), `cleared` (examined, no defect),
+   `unverifiable` (with why). Findings alone show what was found; the log
+   shows what was *examined* — the examined-and-cleared space is the part
+   that was previously invisible and unaccountable.
+7. **Independent eyes when the subject is self-produced — recorded in the
+   artifact.** Anything this session — or the author's prior work —
+   produced gets a fresh-eyes pass by an agent that sees ONLY the artifact
+   plus the question, never the spec, the intent, or the diff. Self-review
+   of self-produced work cannot be comprehensive by definition (reviewer
+   shares author's blind spot). For third-party/codebase subjects the
+   blind-spot rationale doesn't apply — enumeration still binds;
+   independent eyes are discretionary. The analysis document carries a
+   `## Independent eyes` section recording the pass — who ran it, what it
+   saw (doc + question only), its findings, and what was incorporated or
+   defended-against — or a `DECLARED: <why none>` line. The instrument
+   that grades a self-produced artifact must be a different instrument
+   than the one that produced it; a self-graded analysis is the
+   self-deceived lens all over again.
+8. **Traced causes.** Every finding cites evidence — file:line, render,
+   probe output. "probably / likely / somewhere / almost certainly" in an
+   analysis is a defect in the analysis itself (AGENTS.md failure moves).
+9. **Machinery rows never silently absent.** An item that can't run gets a
+   `DECLARED:` line with the reason — absent-without-a-trace is the
+   invisible-miss shape. The reason must name the rule that grants the
+   discretion (e.g., "per item 7's third-party discretion") — a `DECLARED:`
+   whose reason cites no rule is an unverifiable claim, the
+   probe-artifact-promotion shape in polite dress.
+10. **Constraint check before reporting.** Last act before the report:
+    re-read the original message against the ledger — each constraint
+    marked `carried` (with where it landed) or `dropped` (a finding
+    about the work, fixed before reporting or surfaced to the user
+    named). A dropped method constraint discovered at report time is
+    the compression failure made visible — it goes in the report named,
+    never edited around.
+11. **Counts derive from enumeration, never the other way.** Any count
+    printed in an analysis ("14 defects", "30 items", "three concepts")
+    must be countable from the enumeration it cites, in the same
+    document. A count that appears without its inline enumeration is
+    authored copy — and a count that disagrees with its own list is the
+    authored-numbers defect in vivo. Before reporting: recount every
+    printed count against its list.
+12. **Expansion asks get depth obligations, not just item lists.** When
+    the ask says expand / comprehensive / thorough / "think through
+    each thing," the plan declares what each enumerated unit's
+    *substance* will be — its questions, evidence, alternatives weighed
+    — not merely the unit count. Enumeration alone is breadth; the ask
+    is depth per item. A comprehensive doc that is wide and thin is the
+    enumeration-as-headings failure at the sentence level.
+13. **Judgment items named with their deciding question.** Anything in
+    the plan that no mechanical check can verify (taste, rank quality,
+    concept quality, "does it read right") gets listed in the plan with
+    the question that decides it and the instrument that answers —
+    because unverifiable items silently ride on confidence otherwise.
+    Naming them is what puts the judgment half on the checklist where
+    the mechanical half already lives.
+14. **The subject's job is declared before enumeration.** One line,
+    before the universe walk: what the subject is FOR — its job or
+    contract — cited from its artifact class or referent, not authored
+    ad hoc ("an index table exists to scan many rows fast"; "a modal
+    exists to commit or abandon one focused task"). This generalizes
+    `03-periodic-audits` 0b (aim + referent — audit-scoped) and the
+    `aim:` line (the user's end-state, not the subject's) to every
+    analysis ask. An analysis that skips it enumerates defects against
+    an assumed purpose — the confirm frame returning at the analysis
+    level: the subject gets graded as "a table" (markup correct)
+    instead of "an index table" (the contract it exists under).
+15. **Findings carry a terminal state and a home.** Every finding row
+    in an analysis doc ends `FILED: <tracker path>` | `CARRIED: <fixed
+    or resolved this pass>` | `BLOCKED: <external wall>` | `ACCEPTED:
+    <user verb>` | `NOT-A-DEFECT: <why>` | `OPEN` (non-terminal — an
+    open finding holds the stop under `00-operating` §2e).
+    **This item is the canonical findings-disposition vocabulary.**
+    The shared spine is `OPEN` (non-terminal — holds the stop) plus
+    the `BLOCKED:`/`ACCEPTED:`/`NOT-A-DEFECT:` terminals; the
+    resolution states split by artifact class. Doc-class findings
+    (analysis docs, loop findings batches — `16-iteration-loop.mdc`)
+    resolve `FILED:`/`CARRIED:`; surface-class findings (design
+    review — `09-design-review.mdc`) resolve `FIXED`/`VERIFIED`
+    because a rendered artifact can be re-painted. `FILED:` does not
+    exist on surfaces — filing a design defect is deferral — and
+    `FIXED`/`VERIFIED` do not exist on docs — a knowledge defect is
+    dispositioned by evidence or routed to a tracker, not re-painted.
+    Actionable findings land in `docs/active-work/` trackers
+    or carry a `DECLARED:` reason they don't — a finding with no home
+    dies at the next compaction. And red-team the list before
+    reporting: attach each finding to its evidence row or cut it —
+    the audit-ledger's Denial doctrine applied to findings, not only
+    coverage rows.
+16. **The ledger and the plan are durable.** The constraint ledger and
+    machinery plan land in the analysis doc (or the audit ledger) at
+    pass start — not only in the reply. Banked progress is files and
+    verified evidence (`00-operating` §2b); chat scrolls, and a
+    mid-analysis compaction erases the verbatim ledger the
+    constraint-check (item 10) depends on. Chat-only analyses keep the
+    declaration in the reply — declared, not silent.
+17. **Deep-analysis plan before traversal — a plan of attack.** The
+    first analysis artifact is the plan for the analysis itself: which
+    axes walk which universes, what evidence each axis produces (probe
+    output, shot name, computed value, command), and what "coverage
+    complete" looks like for this subject. The plan is written, not
+    held — a chat analysis carries it as its first block, a doc
+    analysis as a section. Traversal that starts before its plan
+    exists is wandering wearing a method's name: the plan is what
+    makes a clean-walk finding legible (you can only say "nothing
+    found" against a declared search space).
+18. **The universe is derived, not authored.** The enumeration of what
+    gets walked is generated from a mechanical source wherever one
+    exists — a coverage-probe dump, a route list, a DOM class
+    inventory, a file glob, a config key table — never from the
+    analyst's memory of what was built. The authored universe is the
+    exact mechanism that shipped an unrendered mobile sheet: the
+    capture matrix listed the surfaces the author remembered, and the
+    unremembered cell was never rendered. Where no mechanical source
+    exists, the universe's derivation method is named in the doc
+    ("authored — no probe exists for X because Y") so the soft spot
+    is visible rather than silent.
+19. **Traversal axes — the default inventory for implementation
+    subjects.** When the subject is a self-produced implementation
+    (a built surface, a shipped iteration, a composed artifact), the
+    walk enumerates the axis inventory below — each axis walked with
+    evidence, or `AXIS-NA: <why>` per axis. These axes are the
+    reconstructed shape of the user's own review batches — the walks
+    that produced every catch in the Evidence table of
+    `.unlazy/analysis/iteration-loop-analysis.md`. Suspicion-driven
+    checking verifies the suspected space; axes traverse the rest.
+20. **Absences are first-class findings.** "What should exist that
+    does not" — missing capabilities, states, actors' affordances —
+    is a finding class equal to defects. Every user batch is
+    dominated by absences (follow, share, report, file editor, the
+    `notabug` status); an analysis that only reports what's broken
+    reports half of what the user would. Absence findings cite the
+    referent or actor that demands them, never taste alone.
+21. **Subject analyses are projects, not answers.** "Analyze <my/the>
+    <system>" is a worked examination with an auditable coverage spine —
+    the artifact is `.unlazy/analysis/<topic>-analysis.md` marked
+    `<!-- analysis-project v2 -->` and carrying: subject-job line,
+    constraint ledger, `## Universe` (each row names its derivation —
+    `verify:`/`doc:`/`DECLARED:`), `## Analysis plan` (the work list —
+    derived from the universe and written BEFORE the walk), `## Plan
+    verification` (the independent pass on the plan BEFORE the walk:
+    cite `.unlazy/eyes/<sid>-plan.md` — the stranger's plan-coverage
+    verdict confirming every universe element is planned, or
+    `DECLARED: plan-verify — <why>` for chat-scale single-unit work;
+    self-attestation isn't verification), `## Units` (**one `###` per
+    universe row** — `Examined:` + `Found:` + evidence token; a bare
+    heading is not an examination), `## Hypothesis
+    log`, `## Constraint check`, `## Second pass` (or `## Re-verification`
+    — one pass per element is coverage, the second pass is verification:
+    findings >0 or a universe >8 rows owes each finding re-examined with
+    NEW evidence — re-verified/confirmed/cleared, not re-cited — or a
+    `DECLARED: second-pass — <why>` for a genuinely single-pass
+    subject), `## Synthesis` (findings RANKED by
+    significance, the causal mechanism named apart from the symptom
+    list, and ≥1 alternative explanation weighed — an enumeration that
+    concludes nothing committal is wide-and-thin, not done), `## Denial`
+    (≥1 red-team bullet attempting to disprove the doc's own coverage —
+    the self-disproof half, or `DECLARED: denial — <why>`), and a
+    `UNITS: x/y` line the gate recomputes. The `ANALYSIS-PROJECT` check
+    enforces the schema — presence-of-marker is a claim, the reconcile
+    is the proof. v1 docs still parse. The audit-ledger's banned
+    coverage-adjective list binds analysis docs too, and per-unit
+    evidence tokens require a ≥4-char backtick span — a bare `` `word` ``
+    is vocabulary, not evidence.
+    **The mandate — substantive work owes the doc without being asked.**
+    Any session landing substantive implementation (≥2 impl files, any
+    UI touch, or any impl write under an armed lane) owes a v2 analysis
+    doc written that session — the `ANALYSIS-MANDATE` stop check arms on
+    the impl signals; `rejection-tracker.mjs` nags once mid-session when
+    impl writes exist with no doc on record. Genuinely narrow work
+    declares `DECLARED: fix-scale — <why>` in gate-evidence (audited,
+    escape-telemetry counted). **Plan first, always:** the sequence is
+    universe → plan → independent plan-verification → walk — analyzing
+    to see *what needs analyzing* is itself the first unit of work. When
+    the analysis produces implementation work, the plan protocol engages:
+    the doc's plan lives INSIDE it: `##
+    Implementation plan` — a per-item table (approach + risk + verify
+    cells, ≥3 items or `DECLARED: single-item — <why>`) plus a
+    `scope: <class>` line (`fix|surface|page|subsystem|product`) that
+    declares which cycle floor the work enters — and `## Plan
+    review` grades every plan part before completion across five
+    lenses: *missing anything / any issues / needs improvement /
+    nice-to-add / could the user want more* — one row per plan item,
+    each lens carrying content or `none — <why ≥12 chars>`. `## Drill`
+    enumerates nested units discovered mid-work (a button's modal, the
+    modal's second page) — each row dispositions as `analyzed — U<N>`
+    (the unit must exist), `DECLARED:`, or `OPEN`; an undrilled nested
+    surface holds the stop.
+    One doc per subject — the newest deep doc in `.unlazy/analysis/` is
+    the presumptive active subject: a session satisfying via a different
+    doc without touching the active one owes `DECLARED: new-subject —
+    <why>` (task identity isn't computable; recency is the proxy, the
+    declaration is the honest fork — parallel docs for one subject are
+    ledger spam). Nested-surface discovery is partially mechanical: the
+    gate scans session-touched UI files for nested-surface triggers
+    (modal/dialog/drawer/sheet/sub-page open calls) and requires the
+    doc's `## Drill` to enumerate the hit files or disposition the scan
+    (`drill-scan:` line / `DECLARED:` with the owning ledger named).
+    The doc's home is `.unlazy/analysis/` by convention — a deep doc
+    written under any recorded path satisfies the mandate; the dir is
+    the canonical home the affinity scan watches, not a cage.
+    **A quality-rejection re-arms with a gap.** When a user message
+    reports a completed analysis was thin (recorded under
+    `quality_rejections` by `rejection-tracker.mjs` — the QUALITY_RE
+    class: "not comprehensive", "too shallow", "15% effort"), the next
+    analysis-shaped work opens with `## Prior-pass gap` — what the
+    previous pass missed and the mechanism that let it ship — or a
+    `PRIOR-PASS:` line in gate-evidence when the work isn't doc-shaped.
+    The re-ask is an instrument-failure event; naming the gap is the
+    obligation (the `PRIOR-PASS` gate check).
+    **Upstream routing (`UPSTREAM:`).** A major/critical finding whose
+    mechanism lives in an artifact already shipped — a spec that
+    prescribed the defect, a plan that misjudged it — is routed, not
+    just fixed locally: `UPSTREAM: <doc.md>` on the findings row re-arms
+    the named doc with a *delta obligation* (`## Delta`/`## Prior-pass`
+    row naming the finding id), never a full re-arm. Same-id dedup
+    prevents ping-pong; emission is legal only inside severity-column
+    findings tables — prose `UPSTREAM:` routes nothing and flags;
+    backticked mention is discussion (16-iteration-loop → upstream
+    routing).
+    **Schema markers arm by content, not filename.** Every artifact
+    marker (`analysis-project v*`, `design-spec v*`, `design-review v1`,
+    `audit-ledger v1`, `iteration-loop v*`, `eyes v*`) counts only at
+    line start — a marker quoted mid-line or inside prose neither arms
+    nor satisfies anything. The arm is content-derived: a doc carrying
+    the analysis-project marker under any basename (the tracker records
+    it in `marker_docs`) owes the schema whether or not its filename
+    matched an armed RE — the marker IS the claim.
+22. **Per-unit axes for third-party subjects.** When the subject is a
+    system someone else built, each `###` unit walks the unit axes:
+    contract (what it is for), actors×capabilities, edge content,
+    lifecycle, error/permission paths, consistency with the house, and
+    meta (which existing check should have caught each finding). For
+    self-produced subjects the project-level walk also runs L1–L14
+    (item 19) — the unit axes examine the parts, L1–L14 examines the
+    whole.
+23. **The chat floor — every armed analysis answer carries the spine.**
+    When the ask clears at chat scale, the answer still carries:
+    (a) the machinery-plan block — universe + axes + evidence each row
+    will produce, declared BEFORE the findings; (b) examined-vs-found
+    accounting — counts deriving from the inline enumeration ("15
+    units examined, 4 produced findings"), never a count without its
+    list; (c) hypothesis-log lines — `found:`/`cleared:`/`unverifiable:`
+    per question asked; (d) committed synthesis — findings ranked by
+    significance, the causal mechanism named apart from the symptom
+    list, ≥1 alternative explanation weighed and killed, and the
+    falsifier ("what would change this"); (e) `## Evidence` — the
+    gathered set. A piece that cannot apply gets `DECLARED: <piece>
+    — <why>`; `DECLARED: chat-scale — <why>` releases the whole floor
+    for a genuinely narrow ask — a declared scope, not an assumed one.
+    An answer carrying only the evidence enumeration is a sweep
+    wearing the floor's name.
+24. **Subject routing is declared, not self-judged.** "Review/audit/
+    analyze <the/my> <system>" routes to the project doc; "a specific
+    question, a narrow compare" clears at the chat floor. The routing
+    is visible in the answer: the doc exists, or a `DECLARED:
+    chat-scale — <why>` line names why this ask is narrow. An armed
+    subject-ask answered with neither is the un-routed miss — the
+    ask's class absorbed silently into whichever scale was cheaper.
+    Doc-everything would make small asks absurd; the DECLARED line is
+    the cheap honest escape, not a loophole.
+25. **Quantifier asks get an ask-side enumeration.** When the ask says
+    "every", "all", "each", "across", or names a countable surface
+    ("every tab", "all routes"), the universe's count is produced by
+    interrogating the subject's own structure — grep/glob the tab
+    definitions, route table, feature dirs, config keys — before the
+    first unit is declared, and the derivation command lands in the
+    doc's universe section. The pleasant-button failure is the shape
+    this kills: the ask's matrix was enumerable (~215 routes, 9 tab
+    definitions, 31 tabs), the agent declared 13 units from memory,
+    and the gate counted its own declaration 13/13. A declared count
+    that never met the subject is self-grading — the earliest and
+    largest scope cut is the one no downstream check can see.
+26. **Units are elements × aspects, not rows per surface.** The unit
+    matrix is enumerated-elements × named-aspects: nine tabs asked
+    across five aspects (complexity, parity, gaps, defects, design)
+    is ≥45 units, not nine rows. A unit whose whole content is one
+    table row or one paragraph is a census entry, not an examination —
+    each unit carries a sub-question, what was examined, and a
+    found/cleared result. Collapsing the matrix to surface-rows is
+    the 20x-shortfall mechanism: breadth vocabulary ("comprehensive",
+    "every aspect") multiplies the unit floor, it does not decorate it.
+27. **Named analysis kinds get named passes.** "Multiple different
+    analyses" or enumerated kinds (a complexity pass, a parity pass,
+    a gap pass) each get their own named pass with its own evidence —
+    sections inside one document do not satisfy a count of analyses.
+    The audit-ledger's enumeration names each pass as its own universe
+    so the coverage rows can't merge them.
+28. **Breadth asks carry a volume expectation.** "Extreme",
+    "comprehensive", "exhaustive", "meticulous", and multi-subject
+    asks set a depth ratio, not a mood: the doc's universe must reach
+    the ask-implied count or the gap is a DECLARED line with a reason
+    the reader can falsify — never a silently smaller universe. When
+    the user names a multiplier ("20x", "twice the depth"), the ratio
+    enters the constraint ledger verbatim and the unit count is
+    reported against it.
+29. **An embedded plan is one row per finding, not a summary.**
+    An analysis that ends in a plan enumerates every finding and gap
+    as its own plan item — tiered, each carrying what/where/why/
+    verify — so the plan's length is a function of the findings, not
+    of how much the analyst felt like writing. A 45-line plan for a
+    31-tab subject is the plan-shaped version of the same floor
+    optimization item 25 names.
+
+## Traversal axes — the user's method as an enumeration
+
+The inventory item 19 binds — the twelve lenses the user's own review
+batches systematically produce, reconstructed in
+`.unlazy/analysis/iteration-loop-analysis.md` → "The user's method".
+Each axis names what it walks and what it produces:
+
+| axis | walks | produces |
+|---|---|---|
+| L1 interaction | every control activated — toggles, menus, links, breadcrumbs, tabs, forms (submit + cancel + dismiss), keyboard walk incl. Escape with focus outside the control | dead controls, no-op handlers, unreachable states |
+| L2 cold-read | each surface judged as a stranger sees it — does it read designed, what is the weakest area | shallow surfaces that pass checklists |
+| L3 journeys | every path in and every path out — cross-surface seams, back-paths, deep links, "how does the owner reach this" | seam failures, wrong targets, orphaned surfaces |
+| L4 exemplar diff | the referent class held beside the artifact — anatomy-level, the real product's units vs these | missing house anatomy, wrong artifact-kind |
+| L5 actors | every actor type × every capability the surface owes them | capability gaps (owner triage, member reply, guest view) |
+| L6 absences | what should exist that does not — features, states, affordances the referent or the domain demands | the missing half of the surface |
+| L7 edge content | long strings, empty, many, zero, extreme values, slow/large media | crowding, overflow, collapsed states |
+| L8 lifecycle | states and transitions — defaults, freshness, staleness, done-states, "what happens after" | wrong defaults, missing freshness semantics |
+| L9 context-fit | actions, copy, density appropriate to where they sit — a menu that differs list vs detail | affordances wrong for their context |
+| L10 viewports | every surface × every real viewport — the matrix derived from the surface list, not remembered | cells never rendered (the empty mobile sheet) |
+| L11 consistency | house grammar, tokens, banned vocabulary, pattern reuse — same affordance, same anatomy | divergent patterns, prohibited accents |
+| L12 meta-instrument | for each finding: which check/lens/vocabulary should have caught it earlier — patch the instrument | the compounding half — every defect fixes its detector |
+| L13 delta | what changed since the last round — files, behaviors, rendered deltas — and whether last round's applied actually landed | rounds that produce no visible movement; assumed-landed fixes (binds rounds ≥2, iteration-loop v2) |
+| L14 embarrassment | name the few things you'd least want a reviewer to notice — then check exactly those | suspicion-avoidance — the unchecked space where pride lives (binds every round, iteration-loop v2) |
+
+An axis walked produces findings or `CLEARED:` with what was examined;
+an axis not walked gets `AXIS-NA:` with the reason. Rows carry evidence
+refs (shot names, probe outputs, computed values) — a traversal of bare
+prose is the mechanical-walking signature, and it is what the
+`ITERATION-LOOP` gate (`16-iteration-loop.mdc`) counts rows to refuse.
+
+## Vocabulary — depth words are earned, not claimed
+
+"comprehensive", "extreme", "exhaustive", "full" may only label an
+analysis whose machinery list is complete — including independent eyes on
+self-produced subjects and, for chat-scale answers, the chat floor's
+committed synthesis (ranked, mechanism-named, alternatives weighed).
+A self-review alone is reported as a self-review; an enumeration that
+concludes nothing committal is reported as an enumeration, not an
+analysis. Calling self-graded work "comprehensive" is the same
+laundering as calling a partial capture "identical" — banned
+vocabulary, not a style choice.
+
+## What this does not fix
+
+The machinery is mandatory apparatus, not a guarantee of insight — a
+second agent shares the author's priors, and enumeration can't generate
+hypotheses the domain doesn't suggest. The rule removes self-calibrated
+effort from the loop; the user's verdict remains the terminal check, same
+as everywhere else in this system.
+
+## The extended project schema — analysis v2 subject-classes
+
+A v2 doc declares `subject-class: project|process|unit — <what>` beside
+`subject-job:`. `unit` is the narrow escape for genuinely small subjects;
+a `unit` doc whose own universe enumerates ≥5 rows is misclassified and
+flags (the class is auditable against its own enumeration).
+
+`project` and `process` subjects carry the deep schema — the difference
+between an artifact that *lists* an examination and one that *shows* it:
+
+- **`## Analysis plan` question-table** — `| question | unit | settles-by
+  | settled-by |`. Each question names an element, mechanism, or decision
+  (≥15 chars, a `?`; "is it good?" is vacuous and flags). Reverse parity:
+  every `###` unit is settled-by ≥1 question-row, or the plan carries
+  `none — <why>` (or `sole — <why>` for a single-walk plan). Plus an
+  ordering note (which units run first and why).
+- **plan→units parity** — each `###` unit maps to an `## Analysis plan`
+  row, by token (`U1`) or range cell (`U1–U9`); `sole — <why>` exempts a
+  genuinely single-walk plan.
+- **`## Model`** — the understanding the units built: flows, invariants,
+  actors, state-space, history. Every row is marked `derived:` (from the
+  walk) or `inferred:` (reasoned, weaker). Hollow sections are eyes-judged.
+- **`## Dependencies`** — what each ranked finding rests on, or
+  `none — <why>`.
+- **`## Failure modes`** — ≥2 ways this analysis itself could be wrong.
+- **`## Prior art`** — sibling/prior examinations reconciled (reuse,
+  supersede, or contradict), or `none — <why>`.
+- **Per-unit depth floor** — each `###` unit carries an examined-record
+  (what was opened), a `found:`/`cleared:` result, and a substantive
+  sub-question naming an element or decision.
+
+`process` subjects additionally carry the axis rows — `contract`,
+`consumers`, `arm-signal`, `satisfy-signal`, `escape-shape`,
+`reach-condition`, `meta-wrongness` — each a row or `AXIS-NA: <axis> —
+<why>`. A machinery analysis that never asks how its own mechanism could
+be wrong is the shallow pass the user keeps rejecting.
+
+## The conduct record — `method:` rows
+
+The schema above binds what the artifact *contains*; the conduct record
+binds how the analysis *ran*. Ten enumerated steps, each carried as a
+`method: <step> — ran` or `method: <step> — AXIS-NA: <why>` row inside the
+doc: `universe` (mechanical enumeration), `question-space`,
+`unit-selection`, `unit-walk`, `widening` (mid-analysis universe
+expansion), `drill` (the drilling-stop rule), `rank`, `synthesis`,
+`falsification`, `eyes`.
+
+Two teeth keep `ran` honest instead of being a claim:
+
+1. **Timing** — the tracker records per-write method-row counts
+   (`analysis_method_hist`). Rows appearing only in the final write are
+   the attestation signature and flag. Rows accruing during the walk are
+   the real shape. A doc written in a single write is the named limit —
+   the gate cannot distinguish authored-live from authored-backfill there.
+2. **Corroboration** — `ran` on mechanically-visible steps verifies
+   against the transcript: `universe` needs a search/glob trail,
+   `falsification` needs a search or test trail, `eyes` needs a recorded
+   subagent launch. Steps with no observable trail stay claims — that is
+   the named limit, not a silent hole.

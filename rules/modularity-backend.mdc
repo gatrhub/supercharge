@@ -1,0 +1,53 @@
+---
+description: Backend modularity — contexts, adapters, domain, DRY (genericized; adapt context names to your app)
+globs: app/**/*.py, src/**/*.py
+alwaysApply: false
+---
+
+# Backend modularity (`app/`)
+
+Legacy framework patterns (views holding business logic, `ensure_*_table`
+boot-DDL helpers, thread-pool workers) are **not** templates for the new code.
+
+## Placement
+
+| Kind of change | Put it in |
+|----------------|-----------|
+| HTTP/WS/job/internal handler | `*/adapters/` — map protocol ↔ domain, nothing else |
+| Business mutation / query | `*/domain/<feature>/` — one async function per mutation |
+| ORM mapping | `*/models/` — thin; no permission math |
+| DB/cache/storage/realtime | `*/infra/` |
+| Shared primitive (id, time, hash, errors) | `platform/core/` — **search this first** |
+| Staff capability | `platform/domain/authz` |
+| Tenant capability | `app/domain/authz` |
+| Cross-tenant social features | `social/` — not `app` tables |
+| Users / sessions / MFA | `identity/` |
+
+Forbidden: a context importing another context's tables; adapters importing
+other adapters' private helpers; framework request types in domain; a second
+copy of an existing use-case.
+
+## Shape of a use-case
+
+```text
+open UoW → load resource (IDOR: tenant id matches)
+  → access.authorize(actor, action, resource)
+  → mutate
+  → commit
+  → outbox event (same transaction)
+```
+
+HTTP and WS both call this. If you copied gates into a second handler, stop
+and extract.
+
+## Size
+
+New modules stay small. If a file is heading toward a 3k-line god-module,
+split by use-case **before** adding more. Vertical slice > "I'll organize
+later."
+
+## Registry
+
+Mutating use-cases must appear in the action→permission registry.
+Unregistered mutate = fail. Until a linter exists, add the mapping next to
+the use-case in the same change.

@@ -1,0 +1,1093 @@
+---
+description: Design spec — every rendered-surface change gets a written spec before the first edit (exemplar → concept → grammar → inventory), so generation transcribes decisions instead of making them silently
+alwaysApply: false
+---
+
+# Design spec — decisions before generation
+
+Applies to every change that alters what a user-visible surface renders —
+`app/ui/` and `app/ui_admin/` source (.js/.css/.html/.j2,
+excluding generated bundles). The mechanical layer records when the first
+UI edit lands and when the spec was written; a spec written *after* the
+first edit fails the gate. This rule is why the gate exists — the hook only
+checks the artifact's shape.
+
+## Why this rule exists (the failure it kills)
+
+The quality gap between surfaces isn't a capability gap — it is a
+conditioning gap. Left to itself, generation composes a surface
+monolithically in one pass, conditioned on the request's literal words and
+the corpus prior ("what channel pages look like generally"), and lands at
+the median: functional, flat, utility-grade. The designed surfaces in this
+repo (the discussion board is the bar) were built the other way: a concept
+first, a grammar second, element decisions third, code last — hundreds of
+adjudicated micro-calls, each given local attention, none left to be made
+silently mid-code.
+
+The remedy is structural: **move the decisions out of generation
+entirely.** Every call that determines what the surface looks like gets
+made in a written, inspectable spec *before* the first edit. When the spec
+is complete, the code is a transcription of decisions — and transcription
+carries almost no variance. A first pass stops being a sample and becomes
+the spec itself rendered.
+
+## The artifact — required before the first UI edit
+
+Path: `.unlazy/design-spec/<session_id>.md` (the hook prints the path when
+a UI edit lands without one). A spec may instead live under a work-unit
+name (`gamersocial-v2.md`) — it then MUST declare `session: <session_id>`
+(or `OWNS: <session_id>`) within its first ~40 lines so the gate can
+resolve it to the session. Specs created this session are v3: a v1/v2
+marker on a newly-authored spec fails DESIGN-SPEC outright (a pre-existing
+v2 spec only edited still parses with a note).
+
+Shape:
+
+```
+<!-- design-spec v3 -->   (v1/v2 docs still parse with an upgrade note —
+new work writes v3; the marker claims the v2 machinery below plus the
+v3 additions — register axis on Directions, tonal budget, read-axis
+bar + bar-floor, audience row, surface center-of-gravity, live risk
+register — and the gate checks it)
+
+## Constraint ledger
+<every constraint-bearing instruction in the ask AND the carried
+thread, quoted VERBATIM — tagged by class: `content` | `method` |
+`decision` | `approval`. The source is the whole conversation
+history, not only open complaints: approvals and ratified decisions
+from earlier iterations are binding constraints that die quietly
+because they feel "settled" — a ledger whose rows are all defects
+carries criticisms and drops decisions. On a continued or resumed
+thread, re-extract constraints from the history/summary BEFORE
+composing: each prior instruction becomes a row or an explicit
+`dropped — <why>` row, never absent. Method constraints (identical,
+standalone, separate, each, sizes, orderings, exclusions) are the
+fragile class — the first thing compression drops between the ask
+and the plan. EVERY row carries its `check:` form — the falsifiable
+test that proves it held ("identical chrome → node/class-level diff
+vs the captured real DOM"; "≤70% wide → probe rect vs #gh-main
+content box at 3840"; "not the board → toolbar pattern ≠ gh-seg").
+A constraint no check can bind is an Open call surfaced to the user,
+never absorbed silently; `DECLARED:` rows stay visibly unverified
+rather than passing as prose. The review artifact's
+## Constraint check diffs the shipped surface against this ledger,
+row by row.
+
+v3 — every spec also carries an `audience` row: who actually looks at
+this surface and on what display/environment (e.g. "consumer desktop,
+creator monitors → matrix must reach ≥3840"; "phone-first commuters
+→ 390/768/1440"). The coverage matrix is DERIVED from this row —
+1440/768/390 by convention is not an audience. The petnet/gamersocial
+failure proved the gap: both matrices topped at 1440 while the user's
+monitor is 3840 — the viewport the product actually got judged at was
+never in the enumerated universe>
+|| class | constraint (quoted) | check: |
+||---|---|---|
+|| audience | <who looks at this + display/environment — quoted or derived> | <matrix widths that cover it> |
+
+## Exemplar
+anchor: <in-repo surface this work is held to> — e.g. the discussion
+  board (topics board in-group) — or "none — no house referent"
+class: <the artifact kind being built — "a board", "a notice strip",
+  "a sheet". This is the surface's POSITIVE referent — what it IS,
+  stated before any contrast sentence. "Not X" / "slimmer Y" is
+  banned as a definition: a surface defined only by differences
+  inherits the sibling's parameter space, which is how a concept
+  set collapses to one axis. Name the real exemplar class first
+  ("a curated file library — Nexus file section, GitHub Releases"),
+  then contrasts may qualify it>
+external: <2-3 real exemplars of the class, required when the house
+  referent is "none" — or "n/a — house referent exists">
+captures: <screenshot paths of the REAL surfaces this work will be
+  judged against — the exemplar surface AND the shell chrome it sits
+  inside (topbar, sidebar, member rail, logo) — at the target
+  viewports, every path resolving to a real file. Grammar from
+  source + shots is artifact-level; grammar from memory or a summary
+  doc is adjectives. No captures → the spec is not complete and no
+  code exists yet. The only legal absence is
+  `DECLARED: no captures — <why no real surface of this class can
+  be captured>` — and "no house referent" is never that why: a
+  public exemplar (Facebook, Steam, Airbnb) is capturable on demand.
+  A referent ban is not an inability either — `anchor: none`,
+  "the house referent is off-limits", or any direction choice that
+  excludes referents leaves the comparative bar unevidenced; the
+  declaration only stands when *no surface of the class exists to
+  capture at all*. `captures: none in-repo` is memory wearing an
+  exemption's name>
+craft: <per named exemplar: ≥2 craft-level traits — not anatomy, the
+  WHY it reads as premium ("Meetup's card works because the image is a
+  photograph OF the event — the payload IS the picture", "Instagram's
+  head works because the stats row is one scannable breath") — each
+  trait mapped to where it lands in THIS product. Anatomy transfer
+  without craft transfer is how "image-top card" became a wallpaper
+  band: the slot survived, the payload died. `craft:` rows name the
+  payload role of every adopted element — an element whose exemplar
+  role was content may not land as decoration>
+intent: <required when the request carries a number or soft size word
+  ("60%", "sorta narrow", "a bit wider") — restate the intent in
+  non-numeric terms ("a narrow focused list like Canny, not 60% of
+  a wide column") BEFORE choosing a mechanism. A number in the
+  request is a proxy, never the spec>
+skills loaded: <the design/taste skills read for this work —
+  `ls .devin/skills/` then every design-*/taste-* SKILL.md that
+  applies, listed by name. An unloaded skill is an unread rule>
+
+## Chrome
+equivalent: <the exemplar's corresponding surface — the thing users
+  do the same job on, or "none — no exemplar surface exists">
+exemplar-chrome: <its chrome class — page | reader | modal | sheet |
+  popover | rail | inline>
+chosen: <the chrome class this surface uses, and why — inherited from
+  the exemplar, or defended in Open calls>
+alternatives: <the classes considered and set aside — chrome is a
+  decided axis, never adopted silently from the nearest pattern>
+budget: <what the chosen chrome may host — a modal/sheet holds at
+  most one scroll column and ~3 sections; a surface that overflows
+  that budget is structural evidence for a page, not a styling
+  problem to compress>
+
+## Directions
+<required on generative asks — a new surface, a mockup, a redesign:
+≥2 genuinely divergent directions (not variants of one), each with
+the trade-off that makes it real, then the pick and why it beat the
+runner-up. Enumerated BEFORE the concept sentence — directions
+written after a choice is already made are post-hoc justification
+wearing a planning costume. The nearest-anchor failure (cloning the
+exemplar because "similar" was said) is what this section exists to
+kill — "similar in quality" and "same structure" are different
+requests and the table must state which reading was taken.
+
+Each direction declares its AXES — where it diverges: anatomy (rows
+vs cards vs detail-forward), emphasis map (what's loudest), density,
+grouping, surface model (library vs feed vs store vs launcher) — AND
+its CONDITIONING — which referent or referent-blend from ## Exemplar
+it draws from (a referent named in the spec's preamble but bound to
+no direction is decoration; conditioning is what propagates). A set
+of concepts that varies only one axis is ONE concept with a
+parameter — "all 3 look identical" is the painted form of that
+sample. The set must show ≥2 distinct axes across it, or defend why
+the design space is genuinely one-dimensional. The axes must also be
+RESOURCED at the format level: a concept set sharing one data schema
+and one row renderer can only vary parameters — if the concepts will
+diverge in anatomy or surface model, the spec says so here (separate
+schemas / separate renderers / separate files), because "three
+concepts, one file, one rowHTML" caps divergence at grouping by
+construction>
+| direction | what it would be | axes it varies | register | conditioned by (referent) | payload allocation (primary / secondary / behind-expansion) | the trade-off | disposition |
+|---|---|---|---|---|---|---|---|
+| <each> | | | | | | | CHOSE / SET-ASIDE: <why> |
+
+Each direction ALSO declares its REGISTER — its position on the
+continuous axes the corpus prior always samples at the mean:
+muted↔vivid · flat↔layered · sparse↔dense · photo↔illustration ·
+quiet↔loud chrome. The mean sample (muted, flat, medium-density,
+utility chrome) is what "clean modern UI" defaults to when nobody
+decides — a set whose every candidate sits at the mean on every
+axis is one sample re-boxed, the register version of the one-axis
+flag. Vary register across the set with evidence-of-fit per
+candidate ("vivid because the payload is authored media", "layered
+because the surface is sparse by design"), or defend why the design
+space is genuinely mean-register (a compliance table earns flat).
+Register choices are WHERE taste enters the spec — the section
+exists because bland shipped under specs that never made the call.
+
+Each direction ALSO declares its PAYLOAD ALLOCATION — which facts
+live on the primary surface (row/card line), which are secondary,
+and which sit behind expansion. A surface's anatomy IS its
+allocation: "index table" and "card list" are different registers
+only if the facts they carry in view differ — an index row carries
+one line of facts with the rest behind ⌄, a card carries the rich
+payload on its face. Identical allocation across every direction is
+the one-concept-re-boxed flag — the table that ported the full card
+payload into row 1 is what this row exists to kill.
+
+The set also declares its SHARED SCAFFOLD — everything the concepts
+do NOT vary: data schema, row/card renderer, anatomy, emphasis map,
+grouping, surface model. Convergence you can't see is convergence you
+can't check: "all 3 share rowHTML + FILES + one anatomy" written out
+loud is the flag "all 3 look identical" arrives too late to be.
+A scaffold row that covers every structural dimension is the one-axis
+sample confessing itself — and a scaffold row covering payload
+allocation confesses "same content model, different box" even when
+three different renderers exist.
+| shared scaffold | what all concepts carry |
+|---|---|
+| <schema / renderer / anatomy / emphasis map / payload allocation / ...> | <shared or per-concept — and which> |
+
+On a RESTYLE ask each direction ALSO declares what it changes vs the
+CURRENT chassis — the existing layout skeleton, palette family, nav
+architecture, density class, and information architecture are the
+design's inertia. A direction row that names no change to them
+inherits them silently, and three directions that all inherit the
+same chassis is one re-skin re-boxed. At least one direction in the
+set must move a chassis component, or the set defends in ## Delta why
+the chassis is already right (the gap was execution, not composition).
+Single-idea execution on an existing surface is how "improve the
+design" becomes "same page, re-tinted" — the direction table is where
+the redesign finds its structure instead of silently inheriting it.
+
+## Concept
+<one governing sentence: what kind of place/thing this surface is —
+"a governance rail for a topic community", "a citation strip, not a
+message row". Unity is authored here, not hoped for.>
+
+## Quality contract
+<required whenever ## Directions exists — a generative ask (new
+surface, mockup, redesign) carries its quality bar in writing BEFORE
+code, because "reads as a product" is a spec'd requirement, not a
+verdict discovered at review. Six named fields:
+bar: <the measurable bar — a RANK clause, not class membership. Name
+  ≥3 checkable properties the 9/10 version of this surface has that a
+  passable one lacks ("every media tile is payload, not decoration",
+  "hierarchy survives a 2-second squint", "one element a stranger
+  screenshots") PLUS the scoring clause a stranger can grade against
+  ("9/10 — picks this over the exemplar on feel alone"). "Reads as an
+  app like X" is a membership test achievable at 5/10 — banned as the
+  whole bar. v3: the bar ALSO names the stranger's READ — "reads as
+  illustration-craft, never clip-art", "reads as a product surface,
+  never a settings panel" — the read-axis clause carries the banned
+  tell explicitly. Composition properties may support the bar; a bar
+  whose every clause is compositional (contrast ratios, grid math)
+  and none is a stranger-read is satisfiable at the register it was
+  written to prevent — a 5/10 wash can pass every arithmetic clause>
+bar-floor: <the declared minimum score this direction may land —
+  "8/10". Numeric, not adjectival: bar-floor is what makes
+  `ceiling < bar-floor` a computable inequality the gate can check,
+  and what the verdict-vs-shipped check holds shipped scores against.
+  A spec that will accept anything above passable has no bar-floor —
+  write the honest number, because the floor the author won't name
+  is the floor the reviewer can't hold>
+ceiling: <the chosen direction's best-possible outcome, scored
+  honestly BEFORE build — "the best execution of this direction lands
+  ~7/10 because the media strategy is decoration" is a spec sent back,
+  not a spec built. If the defended ceiling is below the bar-floor,
+  pick a different direction — the contract exists to catch a
+  ceiling-limiting decision while it is still a row in a table>
+payload: <one row per media-bearing surface: what the media IS and why
+  a stranger reads it as content, not placeholder — "post media is a
+  composed scene with depth + focal subject, not a flat icon on a tile";
+  "group header is a photo of the activity, or its authored equivalent
+  carrying the same information". Decoration-in-the-content-slot is the
+  single most common ceiling-killer — every media slot gets this row
+  or `DECLARED: no media — <why>`. v3: each payload row ALSO states
+  its media REGISTER (photo | illustration | data-scene | abstract) +
+  the thumbnail-scale read evidence — what a stranger sees in the
+  tile at 40px before parsing anything. A payload register that
+  diverges from the exemplar's register (the exemplar's tiles are
+  photographs; ours are vector scenes) is a direction-level taste
+  risk — it lands in ## Open calls flagged as such, because adopting
+  the exemplar's anatomy while overriding its load-bearing register
+  is exactly how clip-art shipped beside "payload" rows>
+distinctive moves: <≥2 authored moves that break the template read —
+  the decisions that make this recognizable as THIS product rather
+  than "the exemplar, reskinned" — each with the mechanism that earns
+  it ("the paw-print react is the brand mark doing interaction work",
+  "the composer speaks pet-voice in placeholder AND chips")>
+generic failure modes: <≥3 ways THIS artifact class reads generic —
+  enumerated before code ("uniform card rhythm", "media tiles as
+  illustration not payload", "flat muted hierarchy") — each paired
+  with the designed-out-by mechanism it maps to in the inventory.
+  These are the class's failure modes, authored — not the global
+  banned-moves list re-pasted>
+|| move | mechanism that earns it |
+|| mode | designed out by |
+
+A quality contract that only re-states the lazy-signals table is the
+same checklist in a second costume — the contract names what makes
+it EXCELLENT, lazy signals name what makes it lazy; both exist
+because passable and good are different targets.>
+
+## Member questions
+<the questions a member brings, in the member's priority order —
+"what do I need → what's new → is this right for me → can I trust
+it". For a multi-surface build this table is the PRODUCT's question
+space; each page's own question-space lives in its `### <surface>`
+derivation block (## Surfaces), and the two are not interchangeable:
+"who can I play with?" is a product question; "can I narrow this
+list?" is a surface question — only the second one generates a
+page's affordances. These are a CONTRACT, not notes: the review
+artifact's ## Question verdicts re-asks each against the shipped
+surface, and an unanswered question is a finding by construction.
+Deriving features from these questions is the only license to
+include them; "the last surface had it" is not a question>
+|| question | member priority | answered by (element, if known) |
+||---|---|---|
+
+## Domain checklist
+<the artifact class's canonical feature set — derived as the UNION
+of ≥2 named real exemplars' actual feature lists, NOT inherited from
+the last surface built and NOT recalled from memory. A file library:
+format, size, version, download count, detail view, requirements,
+uploader, changelog, trust signal, update cadence (Nexus rows carry X;
+GitHub Releases carries Y — name them). A league table: fixtures,
+standings, form, venue, squad. Each feature gets `included —
+<element>` or `omitted — <defended reason>`. An omission with no
+defense is a finding; a checklist citing no exemplar sources is
+memory wearing derivation's name — fails on its face. Each row also
+carries the element's ROLE in the exemplar — payload (it IS the
+content), structural (it organizes), chrome (it frames), decoration —
+because a feature adopted without its role is the motif-band failure:
+the slot arrives, the job it did never does>
+One row is mandatory on generative asks (v3 — D15): the declared
+minimum PRIMARY-UNITS-PER-DESKTOP-VIEWPORT for this surface class
+("a feed: ≥6 content units at 1440"; "a board: ≥20 rows"). An
+information-sparse surface at desktop scale is the void-island
+failure in miniature — the density probe holds the shipped DOM
+against the declared floor.
+|| canonical feature | exemplar source | role | disposition |
+||---|---|---|
+
+## Embedded surfaces
+<every element that itself contains interactions — modal, sheet,
+menu, drawer, popover, form, collection list — is its OWN design
+unit, not a part of the parent surface. Each re-runs the method:
+kind + named exemplar(s) + a canonical-features checklist (a
+## Domain checklist block keyed to the surface) with per-feature
+`included — <element>` or `omitted — <defended reason>`. A downloads
+manager: item identity + icon/preview, source context, version,
+date/status, per-item actions (open detail, re-download, remove),
+list actions (scope, clear, search), empty state — derived from
+real exemplars (browser Downloads, Steam), not assembled ad hoc.
+The parent surface's checklist covers the surface; the embedded
+checklist covers the interior. Naming a referent without extracting
+its canonical features counts as no referent — "browser dl-history
+pattern" is a citation, not a derivation. A modal whose interior
+has no exemplar and no feature list was plotted, not designed>
+
+Each embedded-surface row MUST also carry, beyond the checklist link:
+
+1. **Anatomy citations.** Checklist rows cite the exemplar's OBSERVED
+   anatomy — the element or behavior actually seen in it, with where —
+   and the where is a TOKEN, not a name: a capture file, a DOM detail,
+   a `file:line` of the real implementation, a URL read. "browser
+   Downloads groups items by day + status — dl-history.png" is a
+   derivation; "FB post header row" alone is a guess wearing a
+   citation. A row that names an exemplar without naming where it was
+   observed is memory, not evidence. "file managers" as an exemplar
+   is not evidence.
+2. **Quality bar.** One sentence naming what the exemplar class would
+   NEVER ship — the minimum the surface may not fall below ("a folder
+   card that reads as a plain list row", "a report form that is one
+   bare textarea"). If a bar cannot be written, the exemplar was not
+   inspected.
+3. **Anatomy floor.** Any surface with ≥3 interaction points or ≥2
+   visual regions populates or defends each zone: identity/header ·
+   content · actions · states (hover/focus/empty/loading). A bare
+   zone is a defect, not restraint.
+4. **Nesting inherits.** A surface that CONTAINS another interactive
+   surface (sheet hosting a nested editor, page with inline composers,
+   card whose ⋯ opens a rich modal) re-runs this protocol per nested
+   unit — the child gets its own row and its own checklist, never a
+   mention folded into the parent's row. Recursion is recursive.
+5. **Underdesigned test (post-build, before capture).** Compare the
+   rendered anatomy density against the exemplar class; if the surface
+   is materially thinner than anything its exemplars ship, re-derive —
+   do not capture and call it done. `09-design-review.mdc` runs this
+   lens during critique.
+
+| surface | kind | exemplar(s) | quality bar | canonical-features checklist location |
+|---|---|---|---|---|
+
+## Layout budget
+<required for any layout with fixed allocation — colgroup, grid
+tracks, px/flex-basis columns, a constrained content measure.
+State the arithmetic as a declared inequality PER BREAKPOINT in
+the capture matrix: fixed terms + minimum content term = unit
+minimum ≤ available width (with the padding/math that produces
+each number, not estimates). Include the content-measure equation
+where a width constraint applies ("~70% of #gh-main at 3840 →
+≤2688px"), every fixed column's usable interior vs the largest
+control it must hold, and the responsive shedding plan — which
+term yields at which width. An edit inside a shared budget must
+RESTATE the whole equation, not the touched line: subtracting
+from one column without recomputing the row is how a 100px
+action cell shipped holding a 100px button minus 20px padding.
+The probe verifies declared math against rendered geometry —
+unstated budget = unverified layout>
+| breakpoint | equation | min unit width | available width | verdict |
+|---|---|---|---|---|
+
+## Tonal budget
+<required whenever ## Directions exists on a chrome-bearing surface 
+(v3 — the arithmetic answer to "washed out"): a declared luminance 
+inequality across the chrome stack, authored like the layout budget 
+so the arithmetic probe can verify it. Both failed products lived in 
+a ~3% relative-luminance band (#F6F1E8→#FFFCF7→#E3D9C7 is arithmetic, 
+not a vibe) — flatness you can compute is flatness you can gate. 
+Each level declares its token + expected relative luminance; the 
+declared ΔL floor is the minimum separation a stranger can see 
+(bg→surface ≥ ~2%, surface→raised ≥ ~3%, or a defended equivalent — 
+dark themes declare the same stack inverted). Deliberate low-contrast 
+brands exempt per pair with `DECLARED: tonal — <pair> <why>`.
+Media/payload regions are exempt — the budget binds CHROME (surfaces, 
+rails, cards, dividers), where washed-out ships>
+|| level | token | declared L (rel) | pair floor ΔL |
+||---|---|---|---|
+|| <bg / surface / raised / line / accent-mute> | <var(--…)> | <0.0–1.0> | <min separation vs the adjacent level> |
+
+The budget also declares `accent-budget: <N>` — the maximum number of
+elements per surface the accent hue may paint (color, background, or
+border within tolerance of the accent token). A docs page whose accent
+lives on ~1,400 code pills has no accent — it has a hue tax, and the
+spread is arithmetic the coverage probe now measures. Measured over
+declared flags ACCENT-SPREAD; `DECLARED: accent — <why>` dispositions a
+deliberate accent-heavy surface.
+
+## Emphasis ladder
+<every element on the surface ranked 1–5 — the loudest thing a user
+should see is rank 1 — with the treatment each rank buys (size /
+weight / saturation / position / prominence). The member's primary
+action is rank 1 or the spec defends why not. Rank determines
+treatment, never vice versa — writing the ladder BEFORE the
+inventory is what makes emphasis a decision instead of a default.
+Rank-1 and rank-2 treatments must cite the exemplar's treatment — a
+real referent supplies the shape ("Download = the filled accent CTA
+this artifact class uses"), because unconditioned taste is how the
+ghost-CTA shipped: "prominent" unspecified is a vibe; "the filled
+accent button Nexus puts on its download" is checkable. Two
+consistency rules the ladder must satisfy internally: decision-role
+data never ranks below attribution-role data (meta that decides
+"is this right for me" outranks meta that credits the uploader), and
+no two elements may share a rank unless the spec defends their
+co-salience. The review artifact's ## Emphasis audit compares painted
+hierarchy to this ladder>
+|| element | rank | treatment the rank buys | treatment's referent |
+||---|---|---|---|
+| <each> | | | <rank 1–2 required: which exemplar element supplies the shape> |
+
+## Registration
+<required when the work adds or extends an enumerated type — a channel
+kind, permission, status, role, feature id, view mode. Enumerate every
+site keyed on sibling values by search, never memory: grep the sibling
+keys (typeKey, TYPE_META, case "<sibling>", KIND_ICONS, channelKind,
+permission-key tables) and record the command output. "none — no new
+enumerated type" is the honest entry otherwise.>
+| site | file | sibling keys found | disposition |
+|---|---|---|---|
+| <every registration site the search returned> |
+
+## Surfaces
+<required when the work adds a surface a user can reach — every place
+the feature can appear outside its own module: channel tree, headers,
+settings editors, landing cards, deep-link shells, notifications,
+public/share pages, mobile slots, staff views. Derive by searching the
+feature's routes, channel kind, and domain nouns — the remembered list
+is the hypothesis, the search output is the ledger. "none — extending
+an existing surface in place" is the honest entry otherwise.>
+| surface | file | who reaches it | center of gravity | disposition |
+|---|---|---|---|---|
+| <each> | | | <the eye-anchor — what the page is FOR: the thread, the grid, the composer — and why the shell serves it (a context rail beside a single-thread page is the 290px-chat failure, not a feature)> | |
+
+The `center of gravity` column is v3 (D10): the page names its eye-anchor — the
+one thing it exists to show — and the shell budget must serve it. A
+uniform 3-column template applied to a single-thread surface starves
+the conversation to keep the rail; per-page gravity is how the
+template-sameness failure gets caught at spec time.
+
+**Page surfaces re-run the derivation method (v3 — the plan-
+completeness arm).** A row naming a page (`file: *.html`, a route, a
+`build` disposition) is a surface *output* — it says the page exists,
+never what it contains. Every such row owes a `### <surface>` block
+below this table that re-runs the derivation in miniature: ≥2 member
+questions in the member's own words — the question-space a member
+brings *to this page* — each carrying `→ <named element(s)>` or
+`omitted — <defended reason>`. The element names on the right of each
+`→` are the page's declared affordance set: they land in `## Inventory`
+rows, they are owed a verdict row in the build's element ledger, and
+the review corpus must name them. `DECLARED: <surface> derives at
+parent level — <why>` is the escape for a surface that genuinely adds
+no question-space. This is the embedded-surfaces doctrine applied to
+pages: a page is a design unit, and a page whose contents come from
+recall instead of questions ships the generic prior — the "no sort, no
+save" gap is recall wearing a plan's name.
+
+## Authored vs inherited
+<for every mechanism borrowed from the exemplar, name the expressions
+this surface authors DIFFERENTLY — its own identity marks, control
+shapes, copy register. ≥2 authored expressions per surface region, or
+a defended clone line. A spec where every row is inherited produced
+the exemplar wearing a costume — resemblance is a delta class>
+| region | mechanism inherited | expression authored |
+|---|---|---|
+
+## Delta
+<required whenever ## Directions exists on a restyle/redesign ask —
+the question "what VISIBLY changes" answered as rows, not assumed.
+Every surface or surface-group gets one row classed by what moves:
+[structure] = composition — regions added/removed/resized, hierarchy
+reordered, chrome re-arranged, layout skeleton changed, elements
+added or removed. [surface] = tokens on unchanged composition —
+color/type/spacing/radius/shadow on the same skeleton. [content] =
+copy/data changes. A restyle delta that is ALL [surface] rows is a
+re-skin plan: the shipped page will read as the same design re-tinted
+because that is what was planned. Either name the structural move or
+defend `surface-only — <why>` (the composition was already right;
+the gap was execution). The `keeps:` line names each chassis
+component that survives — layout skeleton / palette family / nav
+architecture / density class / IA — a keep not written is a keep
+never decided. `before:` cites the baseline captures the first-render
+eyes pass will grade the distance from. A fresh build writes one row:
+`new-build — all surfaces new`.>
+| surface | class | what visibly changes | before: |
+|---|---|---|---|
+| <each> | [structure] / [surface] / [content] | | <capture path — restyle asks> |
+| keeps: | <each chassis keep — skeleton/palette/nav-arch/density/IA — named as decided, or nothing silently survives> | | |
+
+## Content shapes
+<required whenever a restyle/redesign ask touches a surface that carries
+recurring information patterns — element classes are what the DOM HAS;
+information shapes are what the content SAYS. A restyle that styles `li`
+but never asks what the data IS ships 300+ "Term — explanation" bullets
+that wanted to be a register (secdoc B11). Before designing, read the
+content and enumerate the recurring shapes with counts: definition pairs
+(li > strong name—explanation), record blocks (Issue N / Gap N / Step N),
+checklists, verdict/option lists, pipelines — each gets an anatomy
+decision: `become — <shape>` (what the information actually wants to be)
+or `keep — <why>` (the current shape is genuinely right). The probe's
+shape census measures the DOM; this section decides it — SHAPE-AUDIT
+flags any measured pattern with no decided row. Chrome-only surfaces
+write `DECLARED: content-shapes — <why>`.>
+|| pattern | count | current shape | anatomy decision |
+|---|---|---|---|
+|| <e.g. "Term — explanation" pairs> | <n> | <bullets / cards / prose> | <become — <register/table/record> — why, or keep — why> |
+
+## State space
+<the surface's states, enumerated before code: rest/hover/focus/
+active, filled/empty/loading/error, collapsed/expanded, every
+viewport — AND the invisible-by-default styling no element plan
+produces on its own: `::-webkit-scrollbar`, `::selection`,
+`cursor`, `:focus-visible`. Mockups and standalone renders are not
+exempt — "fully developed" means the state space exists on the
+page (a static mockup wires real toggles with local JS), or the
+file is labeled "single-state wireframe" so no one mistakes the
+resting pose for the product>
+| state | how it's shown | notes |
+|---|---|---|
+
+## Grammar
+<extracted at artifact level from the exemplar — real values, not
+adjectives: sizes, weights, colors, radii, spacing, voice assignments,
+accent budget, affordance shapes, micro-copy register. The
+`design-grammar` skill carries the extracted house grammar — load it.>
+
+## Inventory
+| element | data role | reference | voice | affordance shape | accent | spacing | states/copy | placement · size vs exemplar | alternatives weighed | vocabulary |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `data role`: attribution / decision / identity / action — the ladder's
+consistency check runs on this column: a decision-role element painted
+below an attribution-role element is a spec-internal contradiction
+("9 MB · 1 week ago" quieter than "by admin" is exactly that). Every
+authored element also enumerates its states explicitly — hover, focus,
+active, disabled, loading, empty, error — or `DECLARED: static`; an
+element shipping one state was plotted, not polished. Each row also
+carries `job:` — what the element is for — and `earns:` — why it earns
+its place on this surface; a row without either is a part-list, not a
+design (the whole table may answer `sole — <why>` when the surface
+genuinely is one element). Each row also carries the expansion verdict
+— `expandable: <named sub-unit>` when the element becomes the subject
+of its own spec/round, or `sole — <why ≥30 chars>` when it closes at
+this level. The question is uniform: no component/leaf judgment is
+left to the writer. |
+
+| <every element, control, state, empty case — with the decision for
+each column already made AND the interrogation answered: why it sits
+where it does relative to its neighbors, what measure it carries vs
+the exemplar's equivalent, and at least two alternatives that were
+considered — or 'sole option — <why>'. An element with no alternative
+weighed was plotted down and moved on, not designed. Every text-
+bearing element also answers the edge-content cell: what happens at
+2× length and at empty — truncation is a spec'd decision, never a
+discovery made on camera. The `reference` column binds each element
+to its retrieved source — `file:line` of the real implementation,
+a capture path, an asset path — or declares `invented:` with the
+defense for why no house reference fits. Un-retrieved elements fall
+to the generic prior; a row with no reference and no defense is a
+generic element that hasn't been caught yet.
+
+**The inventory's mechanical reconcile:**
+`.devin/scripts/check-inventory-parity.mjs <coverage.json> <spec.md>` —
+every rendered DOM class stem (from `ui-coverage-probe.mjs`) must trace
+to this table. Elements shipped that were never decided are the
+silent-classification signature; the `INVENTORY-PARITY` gate runs it
+where both inputs exist.
+
+## Depth
+<only when the spec sits below the top level — a spec that expands a
+parent element is a level-N spec. `depth: N` (parent+1) plus the
+per-level ledger: `| level | surface/component | spec-doc |
+loop-artifact | state |`, one row per level traversed. Depth 1 needs
+no ## Depth at all.>
+
+**Recursion: interactive children get their own rows.** A control or
+container that holds interactive children unpacks them — the modal's
+fields, the field's filter selector, the selector's options each get
+rows (nested under the parent or in a sub-table keyed to it).
+Termination: the atomic leaf is a single control, label, icon, or
+affordance — static chrome does not recurse (a flat list of a hundred
+labels is breadth-as-depth, not unpacking). A spec whose modal is one
+row has a container, not a design; depth stops being the author's
+invisible choice the moment the tree is declared. **Retroactive:**
+revising or extending a spec re-derives ALL existing rows against the
+current rules — a spec written before a new derivation requirement
+is not grandfathered; the revision trigger is the catch point that
+re-applies it.
+
+**Interactive elements carry a behavior contract.** Every element that
+acts — button, selector, input, link, tab, toggle, row — answers in its
+row (or a `behavior:` cell): what it does (action type: navigate /
+mutate / toggle / submit), invocation surface (click / Enter / Space /
+command), sync or async and what the pending state shows, the error
+path and retry, keyboard + a11y semantics, and the edge behaviors
+(double-submit, offline, permission-denied, empty target). These are
+the same terms the review's functional axis and `## Liveness` ledger
+verify post-build — spec-time contract, review-time join. A button
+that is spec-perfect in every design column but has no declared answer
+to "what happens on second click" was styled, not designed.
+
+**Shell chrome has a stricter reference bar.** A capture path is
+not a chrome reference — a screenshot carries layout and color,
+not px values, hover states, or row anatomy, so "resembles the
+capture" produces ~30% fidelity and 70% prior. Chrome rows
+(topbar, sidebar, member rail, logo, scrollbars) must cite the
+real stylesheet/markup at `file:line` — the elements get lifted,
+not approximated. Approximated chrome is fake chrome at lower
+resolution.
+
+**"Identical / match the real UI" binds the graft path, nothing
+less.** When the ask is fidelity, the spec must name the method:
+capture the real DOM wholesale — the *authed* state, mint the
+session if needed — load the complete `<head>` stylesheet
+manifest the page serves (not a hand-picked subset), and graft
+the interior into real nodes. Hand-typed DOM wearing real class
+names is approximation with better materials — there is no
+middle option. A chrome element the dump doesn't contain is
+invented: mark it wireframe; never give it a real-sounding
+class name (invented classes under real names is provenance
+laundering — see design-grammar banned basins).
+
+**The vocabulary column is the lookup that makes the ban a step.**
+For every element type in a graft or real-chrome surface — member
+row, card, button, badge, rail panel, channel item — the spec greps
+the linked stylesheets for the real class names BEFORE authoring,
+and the row records `real class found — <name>` or `no real
+vocabulary exists — declared invented`. `.app-members-item` was one
+grep away when `.dl-memberlist` shipped invented: the ban named the
+violation and nothing named the step that prevents it. The column
+is the step.
+
+**Grafted-DOM edits name the node, not the text.** A rename or
+update to a lifted node touches EVERY layer of the node — visible
+text, `data-*` attributes, `title`, `aria-*`, icon `data-kind`,
+breadcrumbs — not just the visible label. Renaming `>announcements<`'s
+text while `data-channel-name="announcements"` survived produced a
+duplicate channel and a stale crumb: the graft section of the spec
+lists each edited node's layers as a checklist.
+
+**Numbers derive from data, or they are declared invented.** Any
+count, total, size, or stat rendered on the surface is computed
+from the dataset (`FILES.length`, a summed column) — or marked
+`invented:` in its inventory row with the invented label visible.
+"14 files" beside 13 rows and "1.4 GB" beside ~3.6 GB of printed
+sizes is the authored-claim failure: a printed number is a claim,
+and a claim that contradicts the data is a lie, not copy.
+
+**Composition decisions are explicit.** When the spec centers a
+measure ("~60%, space both sides"), it must also say which
+regions share the measure vs the frame — toolbar, status bar,
+head band, search. An undecided region gets the
+stretch-everything default, which is how filters and the
+primary CTA end up stranded at the edges, outside the reading
+column's scan path. Where the eye goes is a spec decision, not
+a capture-time discovery.
+
+**The token dependency list.** The spec enumerates every
+`--app-*` token authored CSS will consume (accent, borders,
+surfaces, vote/component tokens), so the resolved-value check
+(09-design-review Pass 0) has a list to verify. Binding a
+token's name without checking its resolved value at the
+element binds nothing — a bundle that redefines it on a
+stronger selector produces a second accent hue on one surface,
+invisible until probed.
+
+**The affordance column binds visuals, not functions.** "Shaped
+box, chevron+count" describes the good version and the bad
+version identically — a text spec that can't distinguish them
+binds nothing. Authored elements carry the craft decisions in
+the cell: proportions, weight relationships, hover treatment,
+what makes this one better than the template default. If the
+cell wouldn't fail the bootstrap test's description, the element
+is undesigned at spec time — say so or design it> |
+
+**The nuance layer is where default-vs-designed actually lives.**
+Coarse decisions (shape, color, spacing) produce competent; the
+fine layer produces crafted. Each authored element's cell also
+carries the subtlety: muted tones pulled toward the accent
+family at low saturation instead of neutral grey, link vs body
+tonal separation, the micro-rhythm between meta items, which
+of the 2% differences were chosen and why. An element analyzed
+only at coarse granularity gets the coarse default — nuance is
+authored or it is absent. "Put down an input box and moved on"
+happens at this layer even when the element technically has
+hover states.
+
+**The spec analyzes the surface's job before its elements.**
+Before the inventory: what questions does a user bring to this
+surface, in order — and which elements answer them? What should
+exist and what should not — feature inclusion derived from the
+user's questions and stated per element, not inherited from
+what the last version had. "It was there before" is
+inheritance-by-default, not a reason. And the user's first-eye
+path is drawn: where the eye lands first, second, third — and
+what each landing point must communicate unlabeled.
+
+**Every region declares its communicative job before its controls.**
+The surface-level job question applies per region — head, row/unit,
+toolbar, rail, modal, footer: each gets one sentence of what it must
+communicate ("head: you are in a maintained collection — this much
+is here, this current, this required") BEFORE its controls are
+listed. A region spec'd as a control list ships a control list —
+present, correct, and underwhelming, because "a row of correct
+controls" is not a design. The job sentence is what the controls
+are composed to serve; controls without it is furniture without a
+room.
+
+## Open calls
+| element | what the exemplar is silent on | options | chose | cost | rough shape |
+|---|---|---|---|---|---|
+| <decisions no anchor answers — surfaced, never hidden in pixels —
+or a single line "none". A surfaced candidate arrives *evaluated*, not
+as a bare row: `cost` names what building it takes (small/medium/large
++ one word why) and `rough shape` names what it would look like built
+— so the user's yes/no lands on a real proposal, not a teaser. This
+section ALSO carries the judgment items:
+everything the spec decides that no mechanical check can verify —
+ladder rankings, concept quality, "does it read right" — each named
+with the question that decides it and the instrument that answers
+(usually the user's eye at review). Unverifiable decisions left
+unlisted ride silently on confidence; listed, they become checkable
+disagreement points the review can diff line-by-line> |
+
+## Risk register
+<v3 — required whenever ## Directions exists: the live risk table. The 
+ceiling clause and the generic-failure-modes rows from ## Quality 
+contract are PROMOTED here — a risk written as prose is a grave, not 
+a guard ("caps only if SVG art reads clip-art" was written, predicted, 
+and never re-checked). Each row: the risk, the trigger evidence that 
+would prove it fired, and status. Every design-review ## Risk re-check 
+and every eyes pass re-grades every row; a triggered row with no 
+disposition blocks clean the same way an open finding does>
+|| risk | trigger evidence | status |
+||---|---|---|
+|| <from ceiling clause / failure modes / spec critique> | <what evidence in captures/verdicts proves it fired> | open |
+
+## Spec critique
+
+<when ## Directions exists, the spec itself gets a stranger pass
+BEFORE the first render — `.unlazy/eyes/<sid>-spec.md` (eyes v2
+schema). The pass critiques DECISIONS, not renders: internal
+contradictions (a row defending outline while the ladder demands
+filled), ceiling-limiting choices ("the flat-motif media strategy
+caps this at ~6"), role-loss in extraction, direction-vs-bar
+mismatch. The deposited brief must target the ceiling — "given these
+moves, what's the highest score this spec can produce" — not hunt
+for typos. Cheapest catch-point in the pipeline: a ceiling-limiting
+decision is a row here, eight pages of wallpaper later.>
+
+## Revision
+<craft is revision — nothing ships at first-draft effort. Every
+element marked "authored" gets a second pass where the first
+version is the thing to beat, not to keep: enumerate what about
+v1 still matches the template default and change it. An element
+that was generated once and kept was plotted down, not designed.
+Single-state/one-shot elements are the "zero effort" the user
+sees. For multi-surface generative work the revision loop gets an
+EXTERNAL instrument: the FIRST rendered surface's first screenshots
+go to a stranger cold-read — an eyes-v2 pass deposited at
+`.unlazy/eyes/<sid>-first-render.md` briefed against ## Quality
+contract (verdict vs the contract's bar, not a defect sweep) —
+BEFORE the pattern propagates to sibling surfaces. The author
+cannot cold-read its own template; the quality-contract verdict at
+first render is the cheapest point the template-read can be caught.
+`09-design-review.mdc` records the cite>
+
+## Lazy signals
+<the pre-mortem on the user's verdict: walk the planned surface as
+the user will and enumerate what they'd call copied, placeholder, or
+under-designed — before code exists. Every signal listed is either
+designed out in the inventory or defended. A mockup that would
+reveal emoji icons, a typed-logo, invented chrome, or a wireframe
+control on capture gets caught HERE, not on camera>
+| where the user will look | what reads as lazy there | designed out by |
+|---|---|---|
+<each row is a CLAIM, not a closure — every "designed out by" must
+reconcile inside the design-review artifact's evidence or findings
+before the surface is done. A lazy-signals row whose mitigation was
+never verified on the render is self-attestation wearing a checklist
+— the exact failure the row exists to catch, one level up>
+```
+
+### What each section must actually contain
+
+- **Constraint ledger.** The ask's requirements extracted verbatim —
+  quoted, not paraphrased — because paraphrase is where method
+  constraints die ("identical chrome" → "close-enough chrome" happens
+  in the compression, not the code). Each `method` row carries its
+  check form — the test that proves it held — and a row that can only
+  be promised on judgment is written as an Open call instead. A spec
+  without the ledger is a plan built on the compressed ask.
+- **Quality contract.** Required whenever ## Directions exists — the
+  measurable bar, the ≥2 distinctive moves that break the template
+  read, and the ≥3 class-generic failure modes each with their
+  designed-out mechanism. A spec with directions but no contract has
+  decided WHAT to build without deciding what GOOD is — and
+  "competent" is what ships when the bar was never written.
+- **Member questions.** The surface's job stated as the member's
+  questions, in the member's priority order — the only license for a
+  feature to exist ("the last surface had it" is not a question).
+  They are a contract: the review artifact's `## Question verdicts`
+  re-asks every row against the shipped surface, and an unanswered
+  question is a finding by construction. The spec that listed "what
+  do I need first?" as question #1 and shipped the answer last is
+  the failure this section exists to catch.
+- **Domain checklist.** The artifact class's canonical features,
+  derived from real exemplars of the class — not inherited from the
+  previous surface. Features from the class's nature, not the last
+  thing built: a file library without file formats, detail views, or
+  version history is the omission-without-defense shape.
+- **Emphasis ladder.** Every element ranked 1–5 with the treatment
+  its rank buys — the decision that makes emphasis authored instead
+  of defaulted. Written before the inventory because generation
+  transcribes it: a spec with no ladder composes a surface where all
+  elements sit in the same register, which reads as "nothing was
+  designed." The member's primary action is rank 1 or the spec
+  defends it. The review's `## Emphasis audit` compares painted
+  hierarchy to this ladder — a spec can write any ladder but can't
+  write one the paint contradicts.
+- **Exemplar.** Name the in-repo surface this work is held to. User-
+  validated surfaces are canonical anchors (the user praised it → it is
+  the bar); user-criticized surfaces are negative exemplars. The
+  exemplar is the *bar the surface is held to*, never the *template it
+  should resemble*: borrow its mechanisms (why a shaped anchor exists),
+  author this surface's expressions (what the anchor is). An artifact
+  that ends up reading like the exemplar has failed its concept, not
+  converged on it. When no house referent fits the surface kind, 2–3
+  external exemplars of the class are required — the referent rule's
+  existing doctrine (`09-design-review.mdc`), applied upstream of the
+  code.
+- **Exemplar decode — structure inherits, style diverges.** "Same
+  quality as X" splits in two: *structural* decisions — chrome class,
+  column count, section budget, density, spacing rhythm — inherit
+  from the exemplar by default, and each divergence needs a named
+  justification in Open calls. *Style* — identity, accent, motif,
+  domain vocabulary — diverges by default so the surface is authored,
+  not cloned. The failure this clause kills is the inverted decode:
+  diverging on structure (novel chrome the exemplar class never uses)
+  while matching on surface (recycled identity marks) — the exact
+  combination that reads as costume.
+- **Chrome.** The exemplar's corresponding surface is identified and
+  its chrome class named; the chosen class is stated with the
+  alternatives considered. A modal or sheet whose section count or
+  scroll columns overflow the budget is not a styling problem — it
+  is structural evidence the surface is a page, recorded in Open
+  calls or the class changes. The event detail sheet shipped as a
+  ten-section modal is the case this clause exists for.
+- **Registration.** Search output, not assertion: the commands run
+  and the sites they returned. Adding a type to N−1 of N registries
+  is the "Discussion board in community settings" failure — the
+  registry the list was derived from is the one that gets missed.
+- **Surfaces.** The feature's reach outside its own module, derived
+  by search. A surface absent from this ledger is a surface absent
+  from verification — the dead public share page was a route nobody
+  enumerated.
+- **Concept.** One sentence deciding what kind of thing this is, written
+  before any element is. A surface without a governing idea composes as
+  fragments that each satisfy a checklist and read dead together —
+  design-by-committee. This is the anti-fragmentation clause.
+- **Grammar.** The vocabulary this surface will speak, at concrete-value
+  level: "title 15px semibold --app-text, excerpt 13px --app-text-
+  secondary, meta 12px --app-text-muted" — not "three voices." Extract
+  it from the exemplar where the exemplar's language fits; **author it
+  at the same concreteness where the surface's concept calls for a
+  different language** — the bar is the level of deliberateness, not
+  the exemplar's vocabulary (a departure is an Open-call entry, not
+  silence). A bulleted summary is a lossy compression; the compression
+  is where first-pass quality leaks.
+- **Inventory.** The complete element list — every control, label,
+  state, empty case — with each decision column filled **and each
+  element interrogated**: why it sits where it does (placement vs
+  neighbors), what measure it carries (a number or token vs the
+  exemplar's equivalent — never "feels right"), and what alternatives
+  were weighed (≥2, or 'sole option' defended in writing). **Zero
+  decisions left inside generation**: if a styling call isn't in the
+  table, it gets added to the table, not improvised in the CSS. Silent
+  defaulting mid-code is the actual mechanism of utility-grade output.
+  **The inventory is a contract, not documentation**: every element
+  in the code traces to a row, and an element that needs to exist but
+  has no row gets its row written *before* the code — writing an
+  un-inventoried element is a made-mid-code decision, the exact
+  failure the spec exists to kill.
+  The interrogation columns are the second half of that: an element
+  whose only record is which primitive it uses was placed, not
+  designed — "put down an input box and moved on" is what this section
+  exists to kill.
+- **Open calls.** Where the exemplar is silent, the choice is enumerated
+  with its options and the pick is justified — a visible decision, not a
+  hidden default. This is also where a genuinely novel call gets flagged
+  for the user instead of smuggled in.
+
+## The banned basins — checked at spec time
+
+These are the attractor states lazy generation lands in. Naming them in
+the spec makes them unreachable instead of merely detectable:
+
+- flat same-weight text runs (meta-label and quoted content sharing a
+  voice)
+- text pretending to be a control (a label that acts like a button)
+- more than one saturated accent per surface
+- boxes/dividers separating what whitespace should separate
+- edge-accent bars on cards, rows, nav items, or posts — a colored
+  stripe along one edge is the strongest single AI-design tell,
+  user-prohibited in all four authored forms (colored/≥2px
+  `border-left`, left-pinned `::before` bar, stretched thin element,
+  inset box-shadow stripe; RENDER-LINT flags them at write time).
+  State emphasis comes from fill, weight, tags, and hierarchy
+- ornamental ordinals on navigation — `01 Home · 02 Explore` numbering
+  on nav links, menu items, or section chips confers a "systematic
+  document" register that reads machine-stamped on any surface that is
+  not a numbered document. Two unrelated builds shipped it in one
+  week — a corpus prior, not a house move. Numbers-as-content (legal §
+  references, wizard "step 2 of 5", a doc whose own identity is
+  numbered sections) may defend with `ordinal-ok: <why>`;
+  numbering-as-chrome is banned outright (RENDER-LINT flags the
+  authored forms)
+- statistics-as-copy ("0 comments") where an invitation belongs
+  ("Be the first to comment")
+- no identity element **of its own** — a surface that could belong to
+  any app, or one wearing the exemplar's identity instead of its own
+  (a calendar channel in the board's contour is costume, not
+  convergence)
+- native browser controls where the house has a primitive —
+  `<select>`, default checkboxes and radios are corpus prior; the
+  house ships `ui/lib`/`design/primitives` equivalents. Using the
+  native control is a regression to the median, not a neutral choice
+- text naming a different feature — a label, placeholder, or heading
+  that says "Discussion board settings" inside the community editor
+  is wrong-product text; every user-facing string gets a noun check
+  against the surface it will render on
+- "frame furniture" amnesty — shell chrome (topbar, sidebar, member
+  rail, logo) in any render is part of the judged surface: real
+  house chrome copied from real source, or the region is visibly
+  labeled wireframe. There is no third option. The user judges the
+  whole screenshot, and "that wasn't the surface being designed" is
+  a silent scope decision
+- emoji or unicode glyphs as icons where the house has icon
+  primitives (`ui/design/icons.js`) — same basin class as native
+  controls: corpus prior leaking into a house render
+- accent budget read as a hue count — the budget is loudness, not
+  uniqueness. One hue diffused across a dozen elements (tiles,
+  pills, links, glows, active states) emphasizes nothing; the
+  accent's job is contrast
+- `var(--app-*)` fallbacks that hide an undefined token —
+  `var(--app-accent, currentColor)` reads as defensive; `--app-accent`
+  was never defined and the fallback produced an invisible pressed
+  state. Spec'd values name a token that exists or a literal value;
+  a fallback is not a definition. *Mechanically enforced:* the Stop
+  gate lints touched `.css` files for `var(--app-…)` references to
+  tokens declared nowhere under `app` — `EXEMPT-TOKEN:` cites
+  where a genuinely external definition lives
+
+## Composition order — layered, not monolithic
+
+Write in this order and commit each layer before the next: **exemplar →
+chrome → concept → registration/surfaces → grammar → inventory → open
+calls → code**. Chrome is decided before concept details because the
+class bounds everything inside it — a modal and a page do not admit the
+same inventory. Registration and surface ledgers come from *search*,
+never memory, and they land before composition because they bound what
+the code must reach. Monolithic composition (one pass, whole surface)
+is where quality diffuses — attention spreads thin and the cheap basins
+win at the margins. Layered composition gives each decision the full
+attention budget, the way the exemplar itself was authored. Borrow the
+exemplar's motif vocabulary wherever the surfaces are isomorphic;
+invention is reserved for documented open calls — invention is where
+first-pass risk lives. **Adapt, never invent**: before authoring any
+pattern — a control shape, row anatomy, rail card, composer — open
+the real implementation and adapt it; invented CSS where a house
+primitive exists is a defect by definition, not a style choice.
+
+## The stance — method, not mysticism
+
+The quality this rule produces is **executable method, not a trait**.
+What a working designer calls taste is mostly interrogation run
+systematically — and interrogation is a procedure:
+
+- *Per element:* What is this element's job? (No answer → cut it —
+  `09-design-review.mdc` § element-names-its-job.) Which voice rank
+  does it own? Is it accent-eligible? What states am I missing (empty,
+  loading, error, filled, hover, long content)? Does it earn its place,
+  or is it furniture added to look complete?
+- *Per surface:* Where does the eye land first — is that the right
+  place? Does every element cohere under the concept sentence, or is it
+  a committee of parts? What did I add that earns nothing?
+
+A miss is an unmade decision or an uninterrogated element — both are
+findable by method. **Never concede a "taste floor"**: claiming a
+capability limit that was never derived is itself an unverified
+assumption — the same failure class the verification rules ban, worn as
+humility. Report the miss as an enumerated decision or an open call,
+not as an apology about ceilings.
+
+**The calibration compounds.** The method is executable now; what
+reps-and-feedback builds is the calibration inside it — same as a
+junior designer. Every user critique becomes permanent grammar
+(`design-grammar` skill's anchoring rule — write it into the skill the
+same session it lands); every defended delta sharpens the next spec.
+The floor isn't fixed — it is a slope, and the slope climbs.
+
+## Relationship to the design-review gate (09)
+
+The two artifacts are one cycle:
+
+- **Spec (this rule, before edits)** — what the surface will be: the
+  exemplar, the concept, the grammar, the enumerated decisions.
+- **Review (`09-design-review.mdc`, after edits)** — what the surface
+  became: coverage, findings, and the `## Deltas` convergence pass —
+  every difference vs. the exemplar enumerated bidirectionally (moves
+  the exemplar makes that the artifact missed + moves the artifact made
+  that the exemplar wouldn't), each remaining delta defended in writing
+  or an open finding. Property-level comparison — voice ranks, accent
+  budget, separation grammar — not appearance-cloning.
+
+A spec'd change carries both artifacts: the spec is written first, the
+review is written after, and the stop gate checks both.
+
+## Exemption — honest escape, not a skip
+
+Genuinely non-visual edits (a logic-only JS fix, a comment correction)
+need no design spec: `EXEMPT-SPEC: <file or *> — <reason>` in
+`.unlazy/gate-evidence/<sid>.md`, audited like every other exemption.
+Exempting to skip design work on a visual change *is* the old failure,
+now loud.
+
+## Ambition floor — pricing the declared scope (A1–A8, stop-gate armed)
+
+On a breadth-marked improve-ask ("each/every/all <surfaces>") or any corpus
+carrying a ≥5-row per-surface universe table, the spec owes these — each is
+stop-gate enforced under `AMBITION-FLOOR`; evidence: `.unlazy/analysis/ambition-floor-analysis.md`.
+
+- **VERDICT-FLOOR** — no universe-table row may end in a bare adjective
+  (`fine`, `strong`, `mature`, `done`…). A verdict is `improve — <change>`,
+  `keep — <why ≥40 chars>`, or `blocked — <wall>`.
+- **KEEP-ALIBI** — a keep/drop/set-aside reason may not rest on
+  `deliberate`/`already`/`mature`/`working` alone; it must assert a bar
+  property ("holds because <X>"). Prior intent is not a user bar.
+- **PROMISE-PARITY** — every `## Inventory` unit id must resurface in the
+  review/analysis corpus with a disposition (`shipped`/`dropped —
+  <why>`/`blocked — <wall>`). An un-dispositioned promise is invisible.
+- **SWING-DECLARED** — a breadth-marked spec carries a `swing:
+  polish|consolidate|restructure|rebuild` header (or
+  `DECLARED: swing — <why>`). The swing class is the auditable scope ceiling.
+- **DIRECTION-DIVERGENCE** — ≥1 direction must vary universe *coverage*
+  (per-unit wave / anatomy rebuild / chassis change), not only risk or hue
+  — or `DECLARED: directions — <why>`. Same-payoff-class alternatives are
+  strawmen by construction.

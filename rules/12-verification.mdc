@@ -1,0 +1,101 @@
+---
+description: Verification — the claim/status contract for bug-fix claims (DONE/CANDIDATE taxonomy, reproduction ladder, never-twice-blind); mechanical layer is 10-rule-enforcement REPRO + BLIND-DEBT
+alwaysApply: true
+---
+
+# Verification — claims and never-twice-blind
+
+A bug-fix claim must be grounded in observed-symptom evidence, and **the observed world must match the claimed world** — not merely stop containing the reported symptom. This file defines the claim/status contract and the reproduction rule. The mechanical layer is `10-rule-enforcement.mdc` → `REPRO` + `BLIND-DEBT` gates.
+
+## Why this exists
+
+Two failures, one generator:
+
+- A session shipped three fixes for the same visible symptom ("the reply bar covers the last message"), each reported as fixed, none verified on the real page. Every round produced *real* evidence — tests passed, bundles served, a fixture passed — but the evidence verified the mechanism, never the symptom (evidence-substitution).
+- Once real-page reproduction finally existed, the next fix shipped an *unverified over-correction*: the bar was cleared but left a dead ~57px gap under the last message. The gap numbers sat in the verification output, quoted as proof of success, and read as clearance instead of slack (predicate-incompleteness). The user found it in one screenshot.
+
+Both came from the same generator: **checks derived from the complaint ("is the reported symptom gone?") instead of the spec ("what does correct look like?")**. Complaint-derived checks can only find the reported defect returning; spec-derived checks find introduced defects too. And every verification artifact built by the fixer inherits the fixer's theory — the fixture inherited the layout model, the repro harness inherited the predicate model. The theory cannot test the theory.
+
+## The DONE standard — observed world = claimed world
+
+DONE requires all four, on real-page evidence:
+
+1. **Symptom absent** — the reported defect is observed gone.
+2. **Expected state present** — the evidence states what correct looks like *and* its reference. Correct is always relative: the same surface's resting state (e.g. spacing with the feature closed), a sibling surface's behavior, or the spec target (redesign mockup / referent parity). Shape: `expected: ~13px gap (closed-bar margin); observed: 13px` — never just "not covered". Absence predicates pass vacuously — a bar that never opened is also "not covering"; an expected-state predicate cannot pass unless the world actually reached the claimed state.
+3. **Blast-radius clean** — name what else the change moves that a user can see; check each one. Same discipline as the design-review element inventory, applied to the fix's delta.
+4. **Claim scope ⊆ verified scope** — every surface named in the report was observed, or is explicitly marked "extrapolated". "Same code path" argues for *expecting* parity, never for *claiming* it.
+
+## Status taxonomy — what you may claim
+
+- **DONE** — all four conditions above hold on real observation (live page, headless on the real served page, or user-provided screenshot/DOM/geometry).
+- **CANDIDATE** — code shipped + mechanistic verification only. Test suites, served-bundle greps, syntax checks and synthetic-harness runs are *supporting* evidence — they verify mechanism, not symptom, and never turn a CANDIDATE into DONE. Final messages report CANDIDATE items under Issues with exact retest steps; they do not appear under completed work, and fix-verbs ("fixed", "resolved", "should work now", "done") may not describe them.
+
+## Feature-level verification — persona × surface × state
+
+The DONE standard above is symptom-shaped: it verifies a reported defect is gone. Feature work and broad quality asks need a second axis: **did the people who will use this accomplish the tasks it exists for?** Presence checks ("the RSVP bar renders") verify existence; a feature claim requires task evidence.
+
+**The matrix.** Verification evidence is a filled matrix, not a spot check:
+
+- **Persona** — each distinct actor the feature serves: owner/admin, member with only the relevant permission, the unprivileged viewer, the guest/external party where a share path exists. Founder-powerful browsing verifies nothing about member experience; one happy path verified is every other path unverified.
+- **Surface** — every surface in the spec's `## Surfaces` ledger, at every relevant viewport.
+- **State** — empty, loading, error, filled, forbidden, and every lifecycle state the domain supports (pending, cancelled, checked-in, recurring-series, guest).
+
+**Cells are tasks, not screenshots.** Each cell names a completed user task — "a member with only RSVP permission discovers the event and signs up," "a guest opens the share link and sees the event," "an approver sees the pending strip and approves." A cell verified by "the element exists in the DOM" is not a task cell; the task must complete.
+
+**Expectation-first.** Before each cell is exercised, write the predicted state in one line ("member sees the RSVP bar, no approve buttons"). After the render, a prediction-observation difference becomes a finding automatically. Without a written prediction there is no observation that can fail — which is how a cramped ten-section modal renders and gets filed as "renders."
+
+**The unverified remainder.** Every feature-level report carries a non-empty statement of what was not exercised — named personas, surfaces, states, viewports — or an explicit "nothing unverified" that the evidence must bear. Confidence is a claim about coverage, which is checkable, never a claim about quality, which is the user's to make.
+
+## Spec before fix
+
+Before editing for a symptom, write the correct-behavior spec — one line naming what should happen, including the invariant that defines "right" and its **external** reference ("the last message keeps its normal margin above the bar; nothing else moves" — reference: closed-bar spacing). The complaint is a failing case *within* the spec, never the spec itself. The reference must come from outside your model — the same surface's resting state, a sibling surface, or the design target — never invented ad hoc, because anything you invent inherits the theory that produced the bug. If no external reference exists, say so explicitly: the claim is then first-of-kind and carries that caveat.
+
+## Mechanism discipline
+
+- **One-variable rule.** Every mechanism in a fix carries its own evidentiary status. A bundled fix where no component is independently justified is an *unverified hedge* — isolate it (disable and retest) or remove it. "Passed as part of a bundle" is not a status.
+- **Anti-ratchet.** After a rejection on the same symptom, the next change must narrow or isolate — never widen. Adding mechanisms under pressure is the engine that turns one defect into two: defensive layering can't attribute success to any single layer, so every layer gets grandfathered as load-bearing whether it works or harms.
+- **Dormant-path activation.** A change that enables previously-dead code (a lookup that returned null, a gate that no-oped) activates everything downstream of it at once. That activation is itself an unverified change: the whole activated path gets verified, not just the enabling line.
+- **Served-surface smoke.** A change to a served route or a registered job is not DONE until the exact surface was exercised post-change on the running server — the route hit, the job dispatched or drained — and its response/log observed. Compile checks and direct-DB SQL runs verify the mechanism, not the served path: a stale process, a bad union leg, or a handler-signature drift all pass compile and still 503/retry live.
+
+## Own-diff-first bisection
+
+When a regression is reported after edits to shared machinery (hooks, scripts, rules, config the session touched), `git diff` the edited files **before** hypothesizing external causes — client caches, global config, other tools. The own-diff check is the cheapest falsifier: it runs in one command and either names the regression's author or clears your own edits. Attributing a failure to the environment while the diff that introduced it sits unexamined is the RCA version of a third theory shipped blind — this session spent five rounds blaming a client's cached config and drive roots while `git diff` on the hooks file showed the failing command was a registered addition the whole time.
+
+## The reproduction ladder
+
+When the symptom needs observing, take the highest rung you can reach:
+
+1. A live authed browser session on the running server.
+2. A headless browser against the real served page with a real session — seed a test account through the app's own flows, or ask the user for access.
+3. User-provided evidence — screenshot, DOM snapshot, console output, screen recording.
+4. A synthetic harness — legal only after you write down (in the artifact or to the user) why rungs 1–3 were unavailable. A harness built from the same model that produced the bug can confirm the model; it cannot falsify it.
+
+Descending without documenting why is the failure this rule exists to stop.
+
+## Never twice blind
+
+Once the user reports that a fix did not resolve the symptom, the next action on that symptom is **reproduction**, not another code change:
+
+- Edit nothing for that symptom until you hold rung 1–3 evidence of the *broken* state, or a rung-4 harness that demonstrably reproduces it — not a plausible stand-in.
+- `CANNOT-REPRO: <what you asked the user for>` is a legal terminal state. Asking for access, a screenshot, or a DOM dump is the sanctioned move, never a failure of nerve.
+- A second unfixed report on the same symptom with no reproduction in between is a hard stop: escalate to the user for access or artifacts. Do not ship a third theory.
+
+## Mechanical layer
+
+`UserPromptSubmit` → `.devin/scripts/rejection-tracker.mjs` records rejection reports into gate state. The next source edit arms the REPRO gate and records blind debt — every source file edited while a rejection is unresolved was written without observed state and is a guess by definition. Before the turn can end, `.unlazy/gate-evidence/<sid>.md` needs:
+
+- **One `REPRO:` line per rejection round:**
+  - `REPRO: <file or *> — <evidence ref> — expected: <correct state + its reference> — surfaces: <comma list>`
+  - `REPRO: * — CANNOT-REPRO: <what you asked the user for>` — no `expected:`/`surfaces:` required; nothing was observed
+- **One `BLIND-DEBT: <file> — kept: <observed reason>` or `BLIND-DEBT: <file> — removed` line per file edited while the symptom was unverified** — required only once the REPRO obligation is met (observation exists). Each mechanism shipped blind gets an individual status, not a grandfather pass.
+- `EXEMPT-REPRO: <target or *> — <reason>` covers both when the rejection concerned a different symptom or the user asked for another attempt anyway; `EXEMPT-BLIND: <file or *> — <reason>` covers individual debt files.
+
+Honest limit, same doctrine as the rest of the gate system: the gate verifies the fields exist — it cannot judge whether the expectation was right or the reason honest. A fabricated `expected:` is an auditable lie that stays visible in the repo — enforcement narrows the hole, auditability covers the rest.
+
+## Capture parity (A7)
+
+PNG captures and probe offsets are different evidence classes. A UI session
+with `.unlazy/captures/*.png` newer than the newest `.unlazy/coverage/<sid>*.json`
+(or none) owes a `ui-coverage-probe` run — the arithmetic layer
+(shapes/accent/density/shell-fill) reads offsets, not pictures
+(`CAPTURE-PARITY`, stop-gate `AMBITION-FLOOR`).

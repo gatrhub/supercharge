@@ -1,0 +1,104 @@
+---
+description: Never-forget stack, layout, and source-of-truth for the project — TEMPLATE, replace the example blocks with your own
+alwaysApply: true
+---
+
+# Architecture memory
+
+> **Adopter note:** this file is the always-on "never-forget" page — the facts
+> an agent must not relearn mid-task. Keep the section shapes; replace the
+> example content with your project's stack, layout, and authz model. Sections
+> marked *(example)* show the shape a real answer takes.
+
+**Plan:** `docs/architecture-plan.md` (read your slice's section, never paste).
+**Living docs:** `docs/overview.md`, `docs/helpers-reference.md`,
+`docs/sitemap.md` — search them when implementing (never read them whole) and
+keep the entries you change current (`rules/04-rewrite-docs.mdc`). **New
+code:** `app/`. **Legacy reference:** `legacy/` = behavior reference, not the
+look — port logic only after rewriting it onto the new stack; never copy
+god-files wholesale. **Product/design spec:** `rules/07-product-transfer.mdc`.
+
+## Stack (do not "just this once") *(example — replace)*
+
+- Async web framework on the prod runtime; fast JSON/dataclass serialization
+  on the request path.
+- Postgres, dedicated schemas per bounded context. Real FKs. Migration tool
+  only — no boot DDL, no SQLite in prod.
+- Cache/broker optional: the app runs degraded without it (no fan-out, empty
+  presence, no perm cache) — it is an accelerator, never the source of truth.
+- No heavy UI framework by default: native ESM + server templates; CSS
+  variables (`--app-*`), no preprocessor.
+- IDs: time-ordered UUIDs. Cookie = opaque session id. Object storage for media.
+- One binary, role via env (`PROCESS_ROLE=api|worker|scheduler`).
+- Staff URLs under a non-obvious prefix; the conventional `/admin` returns the
+  same public 404 (no redirect).
+
+## Where code goes *(example — replace)*
+
+```text
+app/<pkg>/               # import root — your package name
+  identity / platform / social / app        # bounded contexts
+    adapters/ → domain/ → infra/ + models/
+  app/platform/core/     # master helpers — search here first
+app/ui/lib/              # master JS helpers — look here first
+app/ui_admin/            # staff-only frontend, served on its own asset path
+```
+
+Adapters have no business math. Domain has no framework types. Features do
+not import other features.
+
+## Authz (two planes) *(example — replace with your model)*
+
+- **Staff plane** = categories + levels + per-person grants (internal
+  dashboards, suspend, audit, break-glass).
+- **Tenant plane** = per-member roles + channel/resource overlays (deny wins)
+  + hierarchy.
+- Elevated flags are re-derived server-side from the staff table — the raw
+  actor flag is never trusted; adapters strip it.
+- Gates (mute/raid/slow-mode) are gates, not permission keys.
+- Privileged-view: reads only; writes 403; never elevates.
+- Unknown catalog key = deny. UI snapshot is not enforcement.
+
+## Performance reflexes *(keep or replace)*
+
+- No blocking I/O on the request path. Timeouts on all egress.
+- Tenant-scoped queries always filter the tenant key. Cursor pagination. No
+  unbounded lists. No N+1.
+- Events: transactional outbox, then fan-out. Private surfaces: entitlement
+  fan-out, not broadcast.
+- Heavy deps deferred; fetch permission snapshot before privileged chrome.
+
+## UI reflexes *(keep or replace)*
+
+- New UI = feature module + descriptor (routes, permissions, deferred load).
+  No god-files.
+- Chrome follows the design spec (`rules/07-product-transfer.mdc`): the design
+  target decides the look. Where the spec is silent, keep the current chrome
+  class. Never replace an overlay with a thin GET page or a "not wired yet"
+  tile. Keep every feature — relocate rather than drop.
+- One permissions helper (`canDo`-equivalent). `data-action="feature.verb"`
+  per feature.
+- Optimistic UI only where ordering is reconciled (e.g. chat with client ids).
+
+## Security reflexes *(keep or replace)*
+
+- CSRF + Origin on cookie mutations. WS auth from the session cookie — never
+  tokens in query strings.
+- Bound parameters. HTML allowlists. Magic-byte uploads. SSRF-safe egress. CSP
+  nonces.
+- Prod boot refuses: weak secrets, wrong DB, open CORS, DEBUG on, schema lag.
+
+**Every slice:** maximum security, maximum performance, and modularity / code
+quality are mandatory — not optional polish (`rules/05-sec-perf-modularity.mdc`).
+
+## When implementing a slice
+
+1. Open the matching task doc.
+2. Read the plan section for that slice.
+3. Search `docs/helpers-reference.md`; **widen** an almost-fit helper rather
+   than a second copy.
+4. One domain entrypoint per mutation.
+5. Confirm IDOR (tenant id on load) + the permission you added, cite
+   `file:line`. Tests optional.
+6. Running the dev server is allowed (`rules/running-the-server.mdc`); don't
+   needlessly disrupt a server another agent is using.

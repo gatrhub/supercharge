@@ -1,0 +1,116 @@
+---
+description: Code quality — comments, docstrings, readability, file layout, and how much written process a fix needs (risk tiers)
+alwaysApply: false
+---
+
+# Code quality · readability · fix process
+
+Mandatory on every slice alongside `05-sec-perf-modularity.mdc`. A slice that works but is unreadable, undocumented, or duplicates an existing helper is not done.
+
+## Comments and docstrings
+
+A "major" function is exported / public API, or longer than about 15 lines. Trivial one-liners need nothing.
+
+**Python**
+
+- **Module docstring** at the top of every `.py` file: what it does, the pattern it follows, who imports it. Reference format: `app/<pkg>/platform/adapters/http/<feature>/_shared.py`.
+- **Function docstring** on every public function and every non-trivial private helper. First line = one-sentence summary; then parameters, return value, IDOR/audit notes, or the "why" when it is not obvious.
+
+**JavaScript**
+
+- **File header** `/** ... */` at the top of every `.js` module: what it does, what it was extracted from (if anything), who imports it. Reference format: `app/ui_admin/internal/site/settings-paint.js`.
+- **JSDoc** on every exported function and every non-trivial internal helper. `@param` / `@returns` only when the types are not obvious.
+
+**Both:** inline comments only for non-obvious logic — why, not what. Do not strip existing comments.
+
+## Readability
+
+- **Names:** descriptive and searchable (`fetchSettingsCat`, not `fsc`; `isStale`, not `s`). Abbreviations only when universal (`url`, `id`, `css`).
+- **Functions:** soft cap about 50 lines; split along a natural seam (fetch vs paint, validate vs execute).
+- **Nesting:** max 3 levels of control flow; deeper → extract a helper or return early.
+- **Files:** no god-files. A file heading past about 500 lines → split by concern before adding more (`modularity-backend.mdc`, `ui-modularity.mdc`).
+- **No dead code:** remove unused imports, commented-out blocks and unreachable branches in the code you change.
+
+## File layout
+
+Top to bottom, so a reader can scan predictably:
+
+1. Module docstring / file header
+2. Imports — stdlib, third-party, internal (alphabetical within each group)
+3. Constants — exported, then private
+4. Types / structs — msgspec Structs, TypedDicts, interfaces
+5. Private helpers
+6. Public functions — in order of importance or call order
+7. Backend: route registration (`attach_*_routes`) at the bottom. Frontend: event binding / mount functions at the bottom.
+
+## Helpers: search before you write
+
+- Before writing a helper, search `docs/helpers-reference.md` (and `app/platform/core/`, `app/ui/lib/`) by name **and** by purpose. Widen an almost-fit helper rather than adding a copy.
+- Same for patterns: before authoring any control shape, row anatomy, card, or composer — open the real implementation (`ui/design/patterns/`, `app/ui/lib/`, the board's source) and adapt it. Invented markup/CSS where a house primitive exists is a defect by definition, not a style choice — defect rate tracks distance from a real reference.
+- Before calling the slice done, search once more for each new function you wrote. If one duplicates an existing helper, use or widen the existing one and delete yours.
+- Added or changed a helper → update its entry in `docs/helpers-reference.md` (`04-rewrite-docs.mdc`).
+
+The goal is zero duplicated logic across features: one helper, used in many places.
+
+---
+
+## Fix process — scaled by risk
+
+Every fix gets a real analysis and a real review. How much of that has to be **written out in the conversation** depends on what the change touches. Choose the tier from the code touched, not the size of the diff: a one-line change to caching or authz is high-risk (one-line `view_as` and ETag changes have caused real bugs here). **When unsure, go one tier up.**
+
+| Tier | Covers | What to write |
+|---|---|---|
+| **High-risk** | Authz, permissions, privileged-view · login, sessions, cookies, CSRF, MFA · schema, migrations, backfills, bulk data writes · caching (ETag, `max-age`, Redis keys) · billing and money · realtime fan-out, jobs, concurrency, multi-worker state · boot config and secrets · uploads and outbound requests (SSRF) | The four phases below, visible in the conversation, **one item at a time** |
+| **Standard** | Ordinary logic, endpoints and UI behaviour outside the high-risk list | A note before (root cause with `file:line`; the change; callers touched; **one named failure mode** — what happens when the fix itself fails; how you will verify) and a review after (the checks run — the `AGENTS.md` working-standard set: bugs, dead code, unhandled paths, perf/security misses — plus the better-pass, then verdict). Related items in the same feature may share one note and one review if each item is named in both |
+| **Trivial** | Copy and text, CSS or token tweaks, comments and docstrings, renames inside one file, an obvious one-liner that adds no branch or state | One line in your summary: what changed and where. No separate plan or review |
+
+### High-risk: the four phases
+
+**Phase 0 — Analyse.** Read the relevant source in full, then write: which files you read and what the code actually does (trace entry point → issue, `file:line` for key logic); the root cause, kept distinct from symptoms; the callers and invariants that depend on current behaviour; any pre-existing bug you found (see below). Verify every claim from an analysis doc against source — the doc is a starting point, not a spec.
+
+**Phase 1 — Plan.** Write: the change and the files affected; edge cases and failure modes — per-request variants (session, `view_as`, cookies) that change the response but not the URL (caching / ETag suspects), concurrency and async ordering, RLS / GUC / connection state, and what happens when the fix itself fails; regression risk and which callers depend on current behaviour; how you will verify. If the implementation diverges from the plan, stop and re-plan.
+
+**Phase 2 — Review.** Re-read the changed code in context (the surrounding function, imports, callers), not just the diff. State the result for each check that applies: type mismatches (UNION ALL column types, NULL casts, dataclass fields); cache correctness (does the response vary by session, cookie or `view_as` on the same URL? stale `max-age`?); async correctness (missing `await`, races); error paths; DOM and event lifecycle (work on detached nodes, listener leaks, closure vs dataset flags); dead code and misleading comments; a simpler approach or an existing helper. End with a verdict.
+
+**Phase 3 — Fix findings.** Real findings are fixed before the item is marked done, and the fix gets its own Phase 2. Loop until the review is clean.
+
+### Honest review
+
+"No issues found" is a valid verdict when you say what you checked. Do not invent findings to look thorough. Do not rubber-stamp either: name the checks you ran, and skip a check that cannot apply (no cache, no DOM) with a word rather than pretending to run it.
+
+### The review record's own fields (standard tier and above)
+
+A review that reaches ≥2 implementation files carries, in its written record: `re-derived:` — the review re-derives the change from the code and names at least one element or decision (a paraphrase of the plan's goal line is not a re-derivation); findings carry a **severity class** — `defect:` / `absence:` / `quality:` / `hygiene:` / `approach:` (approach = the change works but a different approach should have been taken); `from-scratch:` — the cold-read verdict ("seeing this change with no context, would I sign it"); and a **`## Significant-improvement walk`** — at least three of `correctness-blast`, `perf-headroom`, `capability-vs-referent`, `simplification`, `consistency-drift`, each `found:` or `defended: <reason>` — "nothing significant to improve" is earned per axis, not declared once. Any field may be `n/a — <why>`; `review-thin: <why>` releases the whole set as an honest declaration — and the declaration stays in the record where the user can see it.
+
+### Pre-existing bugs found along the way
+
+1. State the bug with `file:line` and its failure mode.
+2. **Fix it now only if** it is in the lines you are already changing, or it would break or undermine your fix.
+3. Otherwise add it to the feature's task MD as an open item and list it in your final summary to the user. Do not widen the current slice to fix it.
+4. Never bury it: a found bug is either fixed, or in a task MD and reported to the user.
+
+### Anti-patterns
+
+- Jumping to code from an issue title or an analysis doc without reading the source.
+- Under-tiering: calling a caching, authz or data change "trivial" because the diff is small.
+- Marking an item done because the import works — import success is not correctness.
+- Implementing several high-risk items and writing one review at the end.
+- Noting a real review finding and moving on without fixing it.
+- Changing ETag or `max-age` without checking for per-request variants that share the URL (the most common source of caching bugs here).
+
+---
+
+## Design and visual work
+
+**`09-design-review.mdc` governs this area and is hook-enforced** — any `ui/`/`ui_admin/` source edit requires the element-enumerated critique artifact (fresh-eyes pass before fixes, verification pass after) before the turn can end. The points below are the working discipline inside that protocol.
+
+Visual changes get the same written rigor as code changes — planned, executed, verified on the running surface, and refined — not just "the CSS parses" or "no console errors". Correct-but-bare is not done when the ask was design.
+
+- **Direction first.** Before editing, write one line on what the surface should look like and why (the mockup/spec read, or a stated direction when the spec is silent). "Nice", "polished" and "designed" are requirements, not license to pick the cheapest defensible style. If the intended look is genuinely ambiguous, ask once — do not silently default to minimal.
+- **Element inventory.** Every element in the touched surface is accounted for: spacing, alignment, contrast, typography, borders, states (hover/focus/disabled/empty/loading), responsive behaviour. A card whose footer is right is still wrong if its header is bare.
+- **Invoke the design skills** — they live in `.devin/skills/`; if the skill tool does not list them, **read each `SKILL.md` directly by path**. `design-taste` for direction and the anti-slop checks; `taste-design-review` for the screenshot audit loop; `taste-typography`, `taste-color`, `taste-motion`, `taste-accessibility`, `taste-ux-copy`, `taste-code-craft` as they apply. Stack them — they exist for exactly this.
+- **Verify visually.** Screenshot the running surface at each affected viewport and each theme/scheme, and review the screenshots. Code inspection alone does not verify design.
+- **Refine to exceed, not to pass.** Repeat critique → fix → re-screenshot until a full pass finds nothing and the result would clearly meet the ask — ideally exceed it. Consistency with the project is the floor, not the ceiling; "matches house style" never excuses an under-designed surface.
+- **Done means the loop ran.** Never call a visual change done from code alone, and never call it done because the effort budget feels spent.
+
+Issue trackers: fixed entries are deleted, never marked — `00-operating.mdc` §3a.

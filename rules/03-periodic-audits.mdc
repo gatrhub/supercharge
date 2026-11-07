@@ -1,0 +1,102 @@
+---
+description: Audits — run only when the user asks for one. Topics, analysis-only, where findings go.
+alwaysApply: false
+---
+
+# Audits (on request only)
+
+**Audits run only when the user asks for one.** Do not launch audits automatically when an implementer finishes or when there is spare capacity: automatic audits kept adding findings faster than they could be fixed.
+
+When the user asks for an audit:
+
+- **Topic** — the user picks; if they don't say, ask which:
+  1. Security — existing implementation; plan §9
+  2. Performance — frontend and backend; the plan's perf section (no blocking I/O, no N+1, cursor pagination, fast serialization, tenant-key filter)
+  3. Modularity — features don't import features; adapters have no business math; helpers in `platform/core` / `ui/lib`; no god-files
+  4. Quality / file structure — `app/` layout (domain contexts, `ui/{lib,kernel,design,features,chrome}` or your equivalent)
+  5. Bugs in areas nobody is actively working on
+  6. Rules machinery / gate telemetry — the enforcement layer audits itself; see "Gate-telemetry audit" below
+- **Analysis only** unless the user asked for fixes. Audits do not write product code.
+- **Where findings go:** first look in `docs/active-work/` for an existing tracker on that topic and add to it; create `<topic>-tasks.md` only if none exists. Search the tracker before adding a finding, and skip duplicates.
+- Only open issues go in, written per `00-operating.mdc` §3a (no "confirmed good" notes, no fixed entries).
+- Audit agents count toward the subagent ceiling (`02-subagent-ceiling.mdc`).
+
+## Depth protocol — comprehensive reviews
+
+"Comprehensive" is a coverage claim, not a vibe. A review of a system (a console, a desk, a feature area) is planned before files open, evidenced per unit, and durable across compactions.
+
+**0. Rules pass first.** Before anything else — before the bar, before the ledger — write the rules in force for this review: which rule files apply, which skills must load, which banned moves are the live risks here, which gates are on. This pass is the review's own compliance checklist; the review is measured against it at close, not just against its findings.
+
+**0b. Aim + referent before reading.** "Extreme", "deep", "comprehensive", "analysis" are depth words, not scope words — the referent is an *adversarial-class* examination: every layer of the system (adapters, domain, infra, models, migrations, jobs, member-facing surfaces), the privileged paths (authz, IDOR, CSRF, validation, races, multi-worker state), and live probes — not "more of the same frontend reading." Write the aim sentence and the referent class before the ledger; the ledger is derived from the referent, never from whichever files happen to be easy to read. Findings-density is not a coverage strategy: the layer where findings are scarce is usually where the expensive ones live.
+
+**0c. The main agent is the workhorse; subagents are the scarce exception.** Subagent capacity is rate-limited — it is not the default path for breadth. The default path for a broad surface is the main agent working the ledger unit by unit across the session: the size of the review is set by the surface and the queue carries across compactions — never by what fits in one stretch. A serial audit is *slower*, not *smaller*: an "extreme" audit bounded by "how much I can read before the turn feels long" is a self-drawn finish line. Subagents are spent only where they add something the main agent structurally cannot — a fresh-eyes reviewer who never saw the diff, parallel reads on genuinely independent subsystems the user approved, or a second adjudicator on a security-critical call — per `02-subagent-ceiling.mdc`, with `06-subagent-gatecheck.mdc` re-reads on anything they flag.
+
+**1. Plan before touching code.** Post the bar — what comprehensive means for this surface: the named axes (every panel, every control, mutation paths, authz, feeds, parity, degraded states, live behaviour) — and the coverage ledger: every file / panel / endpoint / control group as its own line, each closing with opened evidence or a filed skip-with-reason. Re-scoping mid-flight is stated, never silent.
+
+**2. Evidence is produced this pass.** Prior sweeps, task docs, and earlier conversation are leads, not coverage. "The last audit verified it" re-opens the source or lands on the skip-list with its reason. Parity claims come from a fresh read of the Old reference, not from notes about it.
+
+**3. Ledger granularity = the unit of the work.** UI reviews: every panel rendered live on the running server; every interactive control activated once (menus, dialogs, filters — applied *and* cleared); pagination exercised to page 2+; at least one induced failure per surface family (denied permission, dead leg, error vs empty). Code reviews: every exported function's callers traced; pattern-reading a region is a ledger entry with a stated reason, never silent coverage.
+
+**3b. Probes from source, candidates ≠ findings.** Selectors and DOM contracts are derived from source before driving them — a failed `querySelector` is evidence about the selector, never evidence of absence; verify the element exists in source before filing. Unverified observations go in a **Candidates** section; a findings-table row requires a resolved evidence pointer.
+
+**4. Document as you go.** The findings doc grows per pass — each finding lands with its evidence when found, not at the end. In-flight memory is not progress; the written file is what survives a compaction or interruption (`00-operating.mdc`: banked progress is files and verified evidence).
+
+**4b. No boundary sections.** A "boundary", "not covered", "not re-verified", or "scope" section that names unexamined units is unfinished work — never a closing paragraph. Every unexamined row exits the doc one of three ways: examined this pass, `ACCEPTED:` (the user re-scoped it this session — their verb on the line), or `BLOCKED:` (a real external wall — the unit stays open and the turn ends only by declaring `STOP: BLOCKED`/`STOP: USER-GATE` in gate-evidence). `QUEUED:`/`SKIPPED:` are not exits — an unexamined unit is examined now, never rescheduled. A doc that reports what it skipped and ships anyway is the exact failure this protocol exists to kill — the open-ledger gate mechanically refuses it.
+
+**5. Stopping is evidenced.** Coverage ends when the tail yields nothing — state it ("final N units: no new findings"). Context pressure, elapsed effort, or a good-enough-feeling pass are not stop conditions: auto-compaction continues the session, so a bigger review just runs longer.
+
+**5b. The report names covered-vs-asked.** The closing summary states the coverage actually delivered against the ask in one line ("read: 14 of 17 modules + 2 of 9 adapters; open units: adapter-x — BLOCKED on <wall>, declared `STOP:`"), so the user audits the scope itself without opening the doc. A report that reads the same as if the audit had been exhaustive is the substitution this protocol bans.
+
+**6. Reviews bigger than one window decompose.** When the ledger exceeds what one pass can honestly cover, split into a task MD with per-area passes and work them serially (subagents only per `02-subagent-ceiling.mdc` — scarce, never the breadth mechanism). Compressing the review to fit the window is the violation, not the window.
+
+**7. The review stage is never skipped.** When no reviewer subagent can run (rate limits, ceilings), the review stage still executes: the written self-audit (re-open the critical sources, re-run the failed probes) plus the user as reviewer. "No agent available" is not license to compress the loop — it removes a reviewer, not the review.
+
+## The audit-ledger — the mechanical coverage artifact
+
+Findings live in the tracker doc (§"where findings go"); **coverage lives in `.unlazy/audit-ledger/<session_id>.md`** — a reconciled artifact the stop-gate verifies arithmetically. The gate arms when a session writes findings/analysis output (`periodic-*`, `*-findings`, `*-analysis`, `*-audit`, `*-deep-dive`/`deep_dive`, `*-review`, `*-notes`, `GATES-*{analysis,audit,perf,findings}` docs — `ANALYSIS_DOC_RE`, `session-tracker.mjs`) or the ledger itself; the text rule requires it for **every** analysis-shaped ask (audit, performance, bugs, security, "ways to improve", "is X done") even when no doc was touched — a chat-only pass escapes the hook but not the rule.
+
+**The ledger is written at pass START, not end.** `## Enumeration` before the first probe — the denominator locks before measurement, and it cannot shrink mid-pass except through a dispositioned row the user can see.
+
+```
+<!-- audit-ledger v1 -->
+
+## Enumeration
+| universe | count | derived-by |
+| record-tabs | 15 | verify: grep -c 'data-tab' app/ui_admin/.../view.js |
+| metric-sql-shapes | 36 | verify: rg -c '_SQL = ' app/.../_sql_analytics.py |
+| audit-routes | 9 | doc: docs/sitemap.md |
+| semantic-surfaces | 4 | DECLARED: user-facing behaviors no glob names |
+
+## Coverage
+| unit | universe | evidence | state |
+| activity | record-tabs | playwright capture .scratch/tabs.json | VERIFIED |
+| cohort_audit | metric-sql-shapes | EXPLAIN 10.1ms exec/16.3ms plan n=1 | single-obs |
+```
+
+- **Enumeration rows** carry a countable unit + count + one of three derivations: `verify: <read-only count command>` (the gate **re-executes** it — `grep`/`rg`/`find`/`ls`/`wc`/`git ls-files` whitelisted pipelines only — and compares; a declared count that doesn't match the re-run is a computed mismatch, not an opinion), `doc: <committed file>` (spec-derived universes like `docs/sitemap.md`), or `DECLARED: <reason>` (≥10 chars — judgment universes stay visible and auditable; they are the honest floor, not a loophole: the reason is in the artifact for the user to dispute).
+- **Coverage rows: exactly one per enumerated unit.** Row count must equal Σ counts — the gate does the arithmetic. The `universe` cell must match a declared label: a row naming an undeclared universe means the enumeration missed surfaces.
+- **States:** `DONE` (read/examined), `VERIFIED` (executed or probed live), `MEASURED` (timed — evidence must carry `n=<k>` with k≥5 or the `single-obs` label; a bare millisecond number is an anecdote) are the only covered states. `ACCEPTED:` counts only with the user's re-scoping verb on the row — the item left the universe by their decision. `BLOCKED:` names a real external wall — the unit stays open, counts as uncovered, and holds the gate until the work is done or `STOP: BLOCKED`/`STOP: USER-GATE` is declared in gate-evidence. `QUEUED:`/`SKIPPED:` are not states — an unfinished unit is never rescheduled, only done. Evidence is required for the covered states — a `—` or "see above" cell fails.
+- **`## Denial` ≥1 bullet** — the written red-team: every report claim listed, each attached to an evidence row or cut/demoted. Presence is enforced; quality is auditable.
+- **`COVERED: X/Y`** — the gate verifies X = covered-state rows and Y = Σ counts. The closing reply to the user **must quote the fraction verbatim** — a 60% pass reports "COVERED: 22/36", never "did an analysis".
+- **Banned in the ledger** (gate-enforced): `representative sample`, `spot-check`, `a sample of`, plus the closure list (`residual`, `known issues`, `for later`, `future work`, `out of scope`, `deferred`) outside dispositioned lines. Sampling is legal only for genuinely unbounded universes — and then it is a `DECLARED:` universe row stating the sample plan, never a phrase in coverage.
+- **Granularity = the finest level the pattern exposes** (files, not directories; SQL statements, not files; tabs, not "the tabs"). Coarser units mean coverage rows that can't be verified.
+- **Escape telemetry row** — every armed ledger carries one row naming its own escape surface: how many `DECLARED:`/`EXEMPT-*`/`review-credit:` lines the session wrote vs how many checks armed (`escape telemetry: <n>/<m> checks` — or the counts in any row). The gate keeps the counters per-session; the row makes the ledger's own escape-dependence visible where the reader already is. Escapes are legal machinery — the telemetry is the record that shows how much the pass leaned on them.
+- **Exemption:** `EXEMPT-AUDIT: * — <reason>` in `.unlazy/gate-evidence/<sid>.md` for sessions that touched an analysis-doc name without running an analysis pass (e.g., fixing a typo in a tracker). The exemption is auditable, never silent.
+
+This is what "extreme" means mechanically: the universe is counted by commands the gate re-runs, every unit closes with evidence or a named disposition, and partial coverage reports as arithmetic. Depth is no longer self-certified.
+
+## Gate-telemetry audit (topic 6)
+
+The enforcement layer only ever accretes — every autopsy adds a check aimed at the failure that just happened, and nothing reviews which checks still earn their place. This audit is the sunset/recalibration pass; it runs when the user asks, like every other topic.
+
+**Data:** `.unlazy/gate-state/_telemetry.jsonl` — one JSON line per gate run (`{ts, sid, exit, total_ms, armed[], failed[], bypasses_total, escapes_total}`). The stop-gate writes it on every exit path (block, bypass, pass); it is bounded to the newest ~500 records past 1MB.
+
+**Questions the audit answers, per check:**
+
+- **Fire rate** — how often did it arm (`armed[]`) vs how often did it block (`failed[]`)? A check that arms constantly and never blocks is either deterrent-working or dead weight; a check that blocks constantly may be mis-scoped.
+- **Bypass pressure** — which checks appear in `failed[]` on runs that ended `pass-bypass`? Routine bypassing of one check means it trained agents around it — recalibrate or fix, don't just count.
+- **Escape skew** — `escapes_total` trend across runs; a rising escape-per-armed ratio is the exemption layer absorbing work the checks were meant to force.
+- **Runtime drift** — `total_ms` trend; the 30s hook budget binds again someday, and slow-growth is invisible without the series.
+- **Doc-vs-gate drift** — spot-check that the gate-map rows in `10-rule-enforcement.mdc` still describe what the code arms (vocabulary and dispositions drift both ways).
+
+**Output:** findings go to `docs/active-work/` per the normal rule — each finding names a check and one of: keep / recalibrate (scope or threshold change with the telemetry that justifies it) / retire (armed-N, blocked-0, no deterrence argument). Retiring a check is a machinery change like any other — rule text + gate + gate-map row move together.

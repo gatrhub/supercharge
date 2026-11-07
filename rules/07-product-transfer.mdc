@@ -1,0 +1,90 @@
+---
+description: Product and design spec — the design target is the look, the legacy surface is the feature checklist, no placeholders, on-hold work, transfer order. Genericized — declare your project's target docs and ledgers.
+alwaysApply: false
+---
+
+# Product and design spec
+
+> **Adopter note:** this rule governs a legacy→new port. Replace the named
+> docs (`docs/active-work/*`, `docs/architecture-plan.md`) with your own
+> ledgers; the discipline transfers unchanged.
+
+## The look: the design target
+
+- **User-facing pages** (everything except staff dashboards): the design
+  target/mockups are the source of truth for the look. Match them exactly.
+- **Staff dashboards**: keep their own theme and sidebar; do not revert them
+  to the legacy look.
+- Where the target does not show a surface, keep its current chrome class: a
+  modal stays a modal, a wizard a wizard, a popover a popover. Deep-link
+  routes may **open** the same overlay; they must not **replace** it with a
+  thin GET page.
+- For **net-new surfaces** the target doesn't cover, the chrome class is
+  declared in the design spec against the exemplar's equivalent surface
+  (`rules/13-design-spec.mdc` → `## Chrome`) — never adopted silently from the
+  nearest pattern. An existing surface whose content has outgrown its class
+  (a modal that now needs multiple scroll columns or >3 sections) is a
+  deliberate re-chrome decision recorded in the spec's Open calls — not drift.
+- A user screenshot or named example is a **class** of bugs, not a single
+  ticket.
+
+## Legacy: the feature checklist
+
+`legacy/` is the reference for **which features exist and how they behave**,
+not for how they look.
+
+- **Keep every feature.** If the legacy surface (or the current app) has a
+  feature and the target has no place for it, relocate it (overflow menu,
+  secondary tab) rather than drop it.
+- You may port legacy logic, CSS and JS patterns after rewriting them onto the
+  new stack: the web framework, the authz planes, `--app-*` tokens, feature
+  modules. Every ported slice must be **stricter** than legacy: fail-closed
+  authz, CSRF on mutations, IDOR-safe, no N+1, tenant-key filters, adapters
+  without business math, features not importing features. Readable new code,
+  not legacy with the comments stripped.
+- **Forbidden wholesale:** legacy god-files, boot DDL, dual-DB reads, admin
+  flags → `"all"`, tokens in query strings, blocking I/O, unbounded lists.
+
+## No placeholders — everything real
+
+Every surface ships real data and real behaviour. Anything not built yet is
+**hidden**, never drawn.
+
+- No hardcoded stand-ins (`0::int AS x`, `false AS y`, `NULL::… AS z`,
+  always-`null` scores). Compute it, or remove the field, the column and the
+  payload key together.
+- A control whose backend does not exist: build the backend in the same slice,
+  or remove the control and file it in the task doc with `file:line`.
+  Honest-disabled is a temporary state you report, never a finished one.
+- Do not invent HTTP to fake it. Port the behaviour properly: correct authz
+  plane, fail-closed, CSRF, cursor pagination, a real query and a real
+  permission key.
+- Forbidden as "done": "not wired yet" copy, empty toolbox tiles, stub cards,
+  occupancy copy, or shipping some of a surface's tabs and calling it
+  complete.
+
+## On hold
+
+Deferred-not-cancelled slices belong in a declared hold list (record them in
+your task doc). Do not start held work until the user lifts the hold, and
+never use it as filler.
+
+## Priority for leftover transfer work
+
+The user's message and the task file they pointed you to come first. For
+remaining legacy→new transfer work, a sane order is: app shell → staff desks
+→ discovery/create flows → feature modals and dropdowns → leftovers.
+User-blocking work outranks leftovers. Ledger: `docs/active-work/`.
+
+## Before a surface is done
+
+1. Open its design target (or confirm it has none) for the look, and the
+   legacy surface for its feature list.
+2. Every tab, field, dropdown and action is present and works — through an
+   existing API or one you add in the same slice.
+3. CSRF on mutations; correct authz plane; no catch-all permission checks.
+4. Seen it running: screenshots reviewed at each affected viewport and theme,
+   and the `design-taste`/`taste-*` review pass is clean (see
+   `rules/08-code-quality.mdc` → Design and visual work). The surface would
+   meet — ideally exceed — the spec and the user's bar, not just contain the
+   right fields.

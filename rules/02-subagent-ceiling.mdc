@@ -1,0 +1,17 @@
+---
+description: Coordinator only — read before launching subagents. Soft ceiling 15, no minimum count, where work comes from, what a brief must contain.
+alwaysApply: false
+---
+
+# Subagent ceiling (coordinator only)
+
+Applies only when you are the **coordinator** launching subagents. Read `06-subagent-gatecheck.mdc` too, before reviewing what they return.
+
+0. **USER ORDER (2026-11): subagents are a rate-limited resource — the main agent is the default worker.** Subagent runs have triggered provider rate-limit timeouts before; the main agent's model is not under the same cap. The default for every task — implementation, audits, coverage sweeps — is the main agent working serially; subagents launch only where they add something the main agent structurally cannot (a fresh-eyes reviewer who never saw the diff, a second adjudicator on a security-critical call, parallel reads on independent subsystems the user explicitly approved for fan-out). "More coverage" alone is not a reason — coverage comes from the ledger and serial work, not from spawning (see `03-periodic-audits.mdc` 0c). Never launch a subagent for work the main agent can do just to move it off the main thread.
+1. **Count** running subagents before each launch (exclude completed, failed, aborted and junk launches). Recount after launching.
+2. **Soft ceiling 15** for everything running: implementers, audits and reviewers. A brief overrun is fine (an overlapping finish and launch, or a user-blocking fix); then drain back toward 15. Never refuse a user-blocking fix because the count is 15.
+3. **No minimum.** Zero running agents is a valid state. Never launch work, or an empty prompt, just to keep agents busy.
+4. **Where work comes from:** the user's message first, then the task file the user pointed you to (for example `docs/active-work/design-overhaul-tasks.md`), then other `docs/active-work/*.md` trackers. For leftover Old→Main transfer work, follow the order in `07-product-transfer.mdc`. Give each agent exclusive files, and never duplicate an agent that already owns a path.
+5. **Briefs** include: goal, ordered steps, the files it owns, forbidden actions (especially out-of-scope edits), definition of done, review criteria, anti-patterns, "do not stop after explaining X", and the "What subagents owe" list from `06-subagent-gatecheck.mdc` (subagents don't load that file themselves). A weak brief is a coordinator failure.
+6. Audits run only when the user asks for one (`03-periodic-audits.mdc`).
+7. **USER ORDER (security audit sessions, 2026-10): no subagents at all.** Subagent runs triggered a provider rate-limit timeout (~24 h). For the security-review work tracked in `docs/active-work/security-audit-mantis-pass.md` (and anything under `security-review-oct.md`), the ceiling is **0** — do all hunting in the main thread. This overrides the soft-15 ceiling for this work until the user lifts it.

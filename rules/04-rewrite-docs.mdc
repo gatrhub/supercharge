@@ -1,0 +1,29 @@
+---
+description: Living rewrite docs (helpers-reference, sitemap, overview, plan) — search them, never read them whole; update only the entries you change
+alwaysApply: false
+---
+
+# Rewrite docs (search + update)
+
+| Doc | Holds |
+|---|---|
+| `docs/helpers-reference.md` | `platform/core` and `ui/lib` helpers — search here before writing a helper |
+| `docs/sitemap.md` | Routes: public HTML, `/v1/auth/*`, `/api/app/v1/*`, `/internal`, `/admin` 404, `/ui` |
+| `docs/overview.md` | Stack, authz planes, the `app/` and `ui/` map |
+| `docs/architecture-plan.md` | The architecture plan |
+
+## Reading: search, don't load
+
+These files are large (`docs/helpers-reference.md` is about 700 KB and `docs/sitemap.md` about 480 KB). Reading one whole fills most of a context window and pushes out the task. Instead:
+
+- Grep for the helper name, route path, module or concept, and read only the matching entries (with a few lines of context).
+- For the plan, read only the section for your slice (§4 process roles, §6 authz, §7 data, §9 security, §10 performance, §12 UI).
+- Never paste these docs into replies.
+
+## Updating: same slice, smallest edit
+
+- New or changed helper in `platform/core` or `ui/lib` → add or edit **its** entry in `docs/helpers-reference.md`.
+- New or changed HTTP/WS route (public or staff) → add or edit **its** entry in `docs/sitemap.md`.
+- Stack, schemas, `PROCESS_ROLE`, chrome split or module map change → update `overview.md`.
+
+Touch only the entries you changed. Do not reformat, reflow or re-sort other entries: several agents edit these files at the same time, and wide edits cause conflicts. Keep new entries short (one or two lines). Do not invent routes; take them from the adapters.

@@ -1,0 +1,52 @@
+---
+description: Performance invariants — request path, queries, realtime, payloads, jobs
+globs: app/**/*.py,app/ui/**/*.js,src/**/*
+alwaysApply: false
+---
+
+# Performance
+
+Canonical: `docs/architecture-plan.md` — the perf section.
+
+## Request path
+
+No blocking I/O in domain or adapters. Use async drivers for DB, cache and
+HTTP. If a library is sync-only, isolate at **infra** with a bounded thread
+pool — never in a use-case. Explicit timeouts on every egress (realtime SDK,
+object storage, link previews, webhooks).
+
+## Queries
+
+- Tenant-scoped lists: **always** constrain the tenant key.
+- Cursor pagination — no `OFFSET` on hot lists.
+- No N+1: directories and per-row lookups use a projection/cache, not a
+  query per row.
+- Lean DTOs; never a `to_dict()` dump of ORM graphs.
+- Index changes go in the migration tool, not "we'll add it later."
+
+## Realtime
+
+- The API role does not hold sockets; the gateway role does. When running
+  combined, still call the same domain write.
+- Fan-out: outbox row in the **same transaction**, then per-channel /
+  per-user publish — not one global pubsub.
+- Private channels: entitled sets only. Never broadcast a private message
+  to the whole tenant.
+- Presence = cache TTL only. No process-local dict.
+- Backpressure: max payload, max subs, idle timeout; drop slow clients.
+
+## Payloads and UI
+
+- Heavy editors/SDKs deferred — not on the boot graph.
+- Permission snapshot before painting privileged controls.
+- Incremental lists; never load whole histories.
+
+## Jobs
+
+Background work is a queued **job**, not `threading.Thread`. Scheduler runs
+exactly one replica. Do not hold a DB transaction across external calls.
+
+## Smell test
+
+If the shape is sync-framework + thread-per-connection + ad-hoc workers on
+the primary DB, it is wrong for this stack.

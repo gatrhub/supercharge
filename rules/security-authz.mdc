@@ -1,0 +1,48 @@
+---
+description: Two-plane authz, IDOR, privileged-view, fail-closed — apply when touching permissions or adapters
+globs: app/**/authz/**/*.py,app/**/adapters/**/*.py,app/**/*permission*.py,app/**/access_gates/**/*.py,app/**/safety/**/*.py
+alwaysApply: false
+---
+
+# Security / authorization
+
+Canonical: architecture plan **§6 and §9**. Catalogs in **code**, grants in **Postgres**. Unknown key → deny.
+
+## Planes (do not mix)
+
+| Plane | Package | Examples |
+|-------|---------|----------|
+| Platform / staff | `staff authz plane` | `staff.users.suspend`, `staff.audit.view`, `staff.app.groups.manage`, `staff.break_glass.group` |
+| Group | `app authz (tenant plane)` | `send_chat`, `manage_roles`, `connect_voice`, `view_channel` |
+
+Adapters call `staff authz plane.require` **or** `app authz (tenant plane).require` / `access.authorize` — never `if actor.is_admin`.
+
+## Group evaluate order
+
+1. Load resource; confirm `group_id` (IDOR).  
+2. Banned / left / unapproved → deny.  
+3. Group roles + overlays (**deny wins**).  
+4. If still deny and actor is **staff and a member**: union staff-in-group overlay (content/voice moderate only — **not** kick, roles, settings, channels, invites).  
+5. Break-glass / takedown only if that capability is active, time-boxed, audited.  
+6. Then gates: mute, slow mode, welcome, verification, raid, country.
+
+Site Owner is **not** a fake group owner by *role* — but per owner rule 2026-10-16, `GROUP_AUTHORITY_ROLE_KEYS` holders (`site.owner`, `admin.l1`-`l3`, `security.l6`, `support.l3`, safety L3+ `senior`/`lead`/`admin`; `management.manager` excluded) DO reach every group's settings/moderation controls through the hydrated `GroupAuthzState.actor_site_admin` bit (set by `load_actor_workspace` from `platform.staff_assignments` base keys, cache-scoped per actor; `PgSiteOwnerGate.holds_group_authority` is the standalone probe — `holds_site_owner` stays site.owner-only for identity-plane gates). The raw `Actor.is_site_admin` field stays untrusted and never self-asserts authority. Step-up, mod-MFA, privileged-view write-block, age gate and IDOR checks still apply on top.
+
+## Hierarchy
+
+`hierarchy.can_moderate(actor, target)` is the only “can this user affect that user?” Owner shielded except transfer / documented takedown. Cannot grant keys you do not have. Owner-only keys (`manage_roles`, `manage_settings`, `transfer_ownership`, `delete_group`) stay off editable roles.
+
+## privileged-view
+
+- **Staff:** server session overlay; never elevates; writes allowed only at simulated level.  
+- **Group:** server read overlay; **all writes 403** while active.
+
+## Transport
+
+- CSRF on cookie mutations. WS: session cookie + Origin allowlist; no tokens in query strings.  
+- CORS allowlist; never `*` with credentials.  
+- Bound parameters only. HTML allowlists for rich text/docs. Magic-byte uploads; opaque object-storage keys. SSRF-safe egress for previews/webhooks. Realtime SDK webhook: signature verify, then domain.
+
+## Behavior to confirm on authz changes (tests optional)
+
+Unauthenticated 401; cross-group 403; overlay deny-wins; staff outside `GROUP_AUTHORITY_ROLE_KEYS` cannot kick in a group they have not joined (set members can — hydrated bit, not the raw flag); group privileged-view write 403; snapshot matches `evaluate`. Confirm in source and cite `file:line` — a test run is not required, and claiming one you did not run is not allowed.

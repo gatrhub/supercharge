@@ -1,0 +1,516 @@
+---
+description: Iteration loop — every implementation runs N rounds of post-implementation deep analysis (plan → traversal → findings batch → restart the standard process) to a scope-scaled budget, hard-gated
+alwaysApply: true
+---
+
+# Iteration loop — the post-implementation analysis cycle
+
+The failure this kills: an iteration that ends when the diff lands and the
+checks pass — defects then surface as *user feedback batches* (dead toggles,
+wrong-context menus, under-designed surfaces, missing features) that a
+structured walk would have produced automatically. The user's own analysis
+method — click everything, cold-read every surface, follow the journeys,
+compare to the real exemplars, walk the actors, enumerate the absences — is
+reconstructed here as machinery, run after every implementation until a
+walk finds nothing. Mechanical enforcement: `ITERATION-LOOP` in
+`10-rule-enforcement.mdc`; the traversal axes are defined in
+`15-analysis-depth.mdc` → traversal axes.
+
+## When it binds
+
+Any session that ships implementation — code, UI, composing sources, rules
+machinery — runs the loop. Analysis-only asks, question answers, and
+ledger-only sessions do not (the arm is `impl_touched` — code-ish
+extensions anywhere incl. `.unlazy` composing files; `.md` and
+`docs/` never arm — a pure plan/tracker deliverable is covered by
+GAP-REVIEW + INDEPENDENT-EYES instead). A rejection fix is an iteration
+and binds the same way.
+
+## Scope calibration — the schema scales with the batch
+
+The v2 contract below (L1–L14 tables, per-axis evidence, eyes on quality
+axes, score deltas) is built for **product/UI and multi-round batches** —
+work with surfaces, clicks, and verdicts to walk. For **meta batches**
+(rule text, gate machinery, harness config, analysis artifacts — the
+instrument editing itself), a compact record is the legal shape: `Rounds`,
+`ENDED:`, a traversal row only for the axes that genuinely applied
+(usually L12/L13), a findings table with `class` + `mechanism`, applied
+lines, exit review — or `EXEMPT-LOOP: * — <reason>` when the audit value
+already lives complete in the tracker and gate-evidence. The failure this
+kills (the reverse of the opening one): a batch that spends more turns
+repairing the record's form than shipping the work — schema compliance
+treated as the deliverable.
+
+## The artifact — `.unlazy/iteration/<sid>.md`
+
+Bound to the session id like every other session artifact — a stale doc
+from another session can never satisfy this one. Written at plan time
+(scope + budget), appended per round. Schema (v2 — v1 artifacts still
+parse, but new work uses this shape and the gate notes the upgrade path):
+
+```
+<!-- iteration-loop v2 -->
+Scope: fix | surface | page | subsystem | product
+Scope basis: <one line — why this class>
+Budget: N           ← floor: fix 1, surface 5, page 6, subsystem 10, product 12
+                       (the floor binds the WALK — roundsRun < floor blocks
+                       every terminator except a real user redirect; a
+                       fix that changed nothing stays 0-round-legal)
+
+## Round 1
+### Analysis plan   ← BEFORE the walk — the round's SEARCH STRATEGY, not
+                       a heading restatement. Required content (the gate
+                       reads it): (a) the universe it hunts — a mechanical
+                       source (glob/route/DOM/probe dump) or DECLARED
+                       judgment universe; (b) the hypothesis space — ≥1
+                       candidate failure mode it expects to find, not just
+                       where it looks; (c) what evidence each axis row will
+                       produce; (d) how each axis maps onto THIS subject
+                       (non-UI subjects walk lenses, not clicks — L10 on a
+                       backend change is runtime contexts, not viewports).
+                       Rounds ≥2 must show what CHANGED — new hypothesis,
+                       deepened universe, remaining open items — not a copy
+                       of round 1's plan.
+### Traversal       ← one row per axis L1–L14: examined | found | evidence
+                       (L13 delta binds rounds ≥2; L14 embarrassment binds
+                       every round — v2 adds both, see 15-analysis-depth
+                       → traversal axes)
+### Eyes            ← rounds ≥2: cites .unlazy/eyes/<sid>-r<N>.md —
+                       the stranger pass's own v2 artifact (two-phase,
+                       see the eyes protocol below)
+### Findings        ← the batch —
+                       | id | severity | class | mechanism | finding | evidence | disposition |
+                       class ∈ defect | absence | quality | hygiene
+                       mechanism = the strategy-level cause (shared across
+                       findings) — required on critical/high + quality/
+                       absence rows; instance-patches cannot close a
+                       mechanism finding
+### Applied         ← each row cites the finding id it closed (F2 → file:line);
+                       critical/quality rows cite the re-verification
+                       evidence (post-fix capture / eyes confirm), not a
+                       self-assertion
+                       | none — nothing applied | none — final
+
+**Upstream routing (`UPSTREAM:`).** A major/critical finding whose root
+cause lives in an artifact this session already shipped gets routed, not
+just fixed locally: append `UPSTREAM: <doc.md> [#section]` to the
+findings row. The named doc then owes a **delta obligation** — a
+`## Delta` / `## Prior-pass` row naming the finding id — not a full
+re-arm (GAP-REVIEW/EYES/OPEN-LEDGER do not re-fire). A doc already
+naming the id does not re-arm: same-id dedup kills ping-pong. Emission
+is legal ONLY inside a findings-shaped (severity-column) table — a bare
+`UPSTREAM:` in prose routes nothing and flags; a backticked mention
+(`` `UPSTREAM:` ``) is discussion, not emission.
+
+## Round 2 …
+
+## Exit review      ← REQUIRED before any ENDED — the quality verdict pass
+| unit | strong|adequate|weak|unverified | evidence |
+Weakest area: <even a strong result names its weakest part>
+Re-verified: <what was re-examined on the finished result>
+
+ENDED: clean-walk | budget-met | fix-scope | redirected — <one line>
+Rounds: M/N
+
+## Depth             ← only when the loop recurses below the top level
+depth: N             ← parent+1; depth 1 needs no ## Depth at all
+| level | surface/component | spec-doc | loop-artifact | state |
+| 1 | <parent surface> | <parent spec> | <parent loop artifact> | done |
+| N | <this unit> | <this spec> | <this artifact> | open |
+
+## Return            ← REQUIRED when depth >1 — the traversal-back pass:
+                        the parent level exists, so coming back up is a
+                        named act, not a summary
+- integration seams: <how the child's result lands in the parent —
+  touched edges, shared state, contract kept or changed>
+- coherence: <does the child read as the same product as the parent —
+  grammar, voice, density>
+- parent-level completeness: <what the parent still owes after this
+  child lands — or none — <why ≥30 chars>>
+- second expansion question: <re-asked on the parent after the child —
+  does anything new read expandable — or none — <why ≥30 chars>>
+  (each row may answer `none — <why ≥30 chars>`; ≥2 of the 4 rows must
+  carry real content — an all-none Return is a summary, not a pass)
+```
+
+## Scope classes — declared, never self-served
+
+| class | covers | budget |
+|---|---|---|
+| `fix` | a named fix, a card improvement, a toggle repair — one implemented change | 1 |
+| `surface` | a modal, sheet, popover, embedded surface | 5 |
+| `page` | a page, view, or equivalent composed surface | 6 |
+| `subsystem` | a channel type, feature system, rules/gate machinery | 10 |
+| `product` | a multi-surface build — several pages/systems in one ask | 12 |
+
+The class is written before implementation with its `Scope basis:` — the
+gate also cross-checks: `Scope: fix` with >15 implementation files is a
+mislabel, not a fix. Between two classes, the **larger** wins (a page
+containing a modal is a page). The floor binds the **walk itself** —
+`roundsRun < floor` blocks every terminator except a real user redirect
+(`ENDED: redirected`) or a fix that changed nothing; a `Budget:` number
+declared below the floor fails outright, and open findings keep the loop
+running past it. The cap holds at 2× the floor: remaining findings must be
+filed to a tracker (with their out-of-scope reason) or the turn ends
+`STOP: USER-GATE`. "One more nit" is not a residence.
+
+## The round — four steps, none skippable
+
+1. **Analysis plan.** Written before the walk — the round's search
+   strategy. It names: the universe it hunts (derived from a mechanical
+   source where one exists — a `ui-coverage-probe.mjs` dump
+   (`.unlazy/coverage/<sid>.json`), a route list, a glob, a DOM
+   inventory — or a DECLARED judgment universe); the hypothesis space
+   (≥1 candidate failure mode per universe class — what the round
+   expects to find, not just where it looks); which axes; and what
+   evidence each row will produce. For non-UI subjects the plan also
+   names how each lens maps onto this artifact class — the axes are
+   lenses, not literal UI actions. Rounds ≥2 write what changed —
+   a new hypothesis, a deepened universe, the remaining open items —
+   a plan that repeats round 1's is a stall, not a search.
+2. **Traversal.** Every axis L1–L14 walked. Each row carries examined ×
+   found × an evidence reference (probe output, shot name, computed value,
+   `file:line`) — prose-only rows fail the gate. Two floors on top:
+   **hard-ref** — every round needs ≥1 row of executable evidence
+   (probe/shot/computed/`verify:`/render/stdout; `file:N` and `.md` cites
+   are document evidence, not execution); **novelty** — an identical
+   (axis, evidence-cell) re-cited in a later round fails unless the cell
+   opens `RE-CHECK:` (a declared re-verification). `AXIS-NA:` is legal
+   only with a substantive reason (≥8 chars) — "n/a" is a skip, not a
+   defense, and a traversal that is all-NA has examined nothing.
+   **Rounds ≥2 on self-produced subjects also run an independent-eyes
+   pass that deposits an artifact**: the stranger sees only the subject
+   + its brief (never the spec, the intent, or the diff) and writes
+   `.unlazy/eyes/<sid>-r<N>.md`, cited from `### Eyes`. The pass runs
+   the two-phase protocol below — a bare "critique this" launch is the
+   under-briefed failure this section exists to kill. A
+   `DECLARED: not-self-produced — <why>` inside `### Eyes` is the only
+   legal skip — and it is honest only when the subject genuinely isn't
+   yours.
+
+#### The eyes protocol — two phases, comprehensive by requirement
+
+The stranger's job is a **comprehensive critique of the subject as a
+shipped product** — not a spot-check, not a bug sweep, not verification
+of the last round's fixes. It judges the whole thing the way a hostile
+reviewer or a deciding user would. The pass is comprehensive **by
+requirement, not by adjective**: the enumeration, the per-surface
+verdicts, and the evidence floor are the protocol, and a pass that
+skips them failed, however hard it felt.
+
+**Phase A — the capture spec.** The stranger first says what it needs
+to see: which surfaces, which states (empty, loading, error, filled,
+permission-gated, hover/focus, edge content), which viewports, which
+interactions exercised. The coordinator executes the captures — the
+stranger never critiques what it could not see, it *demands* the
+captures. For non-rendered subjects (rules machinery, backend) the spec
+is which code paths/fixtures/transcripts to run or read; a
+`DECLARED: single-phase — <why>` in the artifact is honest only when
+the subject genuinely needs no captures (a pure text artifact already
+fully readable).
+
+**Phase B — the full critique.** With the captures in hand the stranger
+walks the declared universe and deposits the artifact:
+
+```
+<!-- eyes v2 -->
+Agent: <who ran it + how it was launched>
+Brief: <the question + protocol it was given, verbatim — deposited so
+        anchoring is auditable>
+
+## Capture spec
+<what it asked to see in phase A — or DECLARED: single-phase — <why>>
+
+## Coverage
+| surface | states/contexts examined | evidence |
+<one row per surface examined — 'looked at it' is not coverage>
+
+## Verdicts
+| surface | verdict (strong/adequate/weak) | weakest area | strongest objection | biggest lever |
+<one verdict per surface — 'no findings' means nothing without verdicts>
+
+## Scores
+| surface | score (1–10) | distance to bar | exemplar-compare |
+<the number + what the 9/10 version has that this doesn't + the
+ exemplar capture at the same viewport (or 'none — no exemplar' / a
+ surface the spec never conditioned on). 'adequate' covers a 5 and an
+ 8 with one word — the score is what makes fine visible>
+
+## Findings
+| # | severity | class | finding | evidence |
+<evidence = file:line, shot name, DOM/probe detail — every row, always;
+ a pass with zero quality-or-absence rows carries DECLARED: all-defect
+ — <why the subject earns a defect-only read>>
+
+VERDICT: <clean | NEEDS-WORK — N findings> — one-line summary
+```
+
+- **The brief is anchored on method, never outcome.** The canonical
+  brief the coordinator adapts (deposited verbatim in `Brief:`):
+
+  > "You are an independent reviewer evaluating a **shipped product** —
+  > not a work-in-progress, not a prototype awaiting validation. Real
+  > users encounter this daily; your job is to find everything that
+  > would embarrass it in front of them. Run an extremely comprehensive
+  > critique: enumerate EVERY surface, EVERY state (empty, loading,
+  > error, filled, permission-gated, edge content), and EVERY viewport
+  > the subject occupies. Per surface return a verdict — strong /
+  > adequate / weak — naming its weakest area, its strongest objection
+  > (what makes a real user bounce), and the biggest lever. Then every
+  > defect, absence, and quality gap with severity and evidence —
+  > `file:line`, screenshot name, DOM detail. Score each surface 1–10
+  > and name what the 9/10 version has that this one doesn't. Where a
+  > <referent class> capture exists, compare at the same viewport —
+  > don't grade it against its own floor. Judge against <referent
+  > class> — real products users actually choose, not 'fine for what
+  > it is'. First tell me exactly which captures you need; critique
+  > nothing you cannot see."
+
+  A post-fix round's brief is still this full critique — *"verify the
+  fixes landed"* narrows the stranger to a regression check and is the
+  degradation the `Brief:` deposit exists to expose. Verification of
+  specific fixes may be appended; it may never replace the protocol.
+- **Verdict-per-surface is the floor.** A findings-only pass can skip
+  "is it good"; a verdict row can't. `VERDICT: no findings` is legal
+  only beside verdict rows that justify it.
+- **A launch is not a deposit.** Every eyes/critique pass launched this
+  session ends as a deposited `.unlazy/eyes/<sid>-*.md` artifact or a
+  disposition in the round naming why it never landed — a launch that
+  never deposits is coverage claimed, not coverage.
+- **The coordinator adjudicates — and defended findings carry over.**
+  Rebutted or `NOT-A-DEFECT`'d stranger findings get a `## Defended`
+  block in the round (finding + the orchestrator's defense). The next
+  round's eyes brief appends the defended list — "the orchestrator
+  disputed #N because <x>; evaluate" — so objections die to a second
+  stranger, not to the reviewed party's say-so.
+- **Quality axes hand off to the eyes artifact.** On rounds ≥2 the
+  author's L2/L4/L9 rows cite the eyes artifact's verdicts as evidence
+  — the author walks the quality axes *on the stranger's data*; its own
+  "reads designed" judgment is the self-review the axis exists to
+  distrust.
+3. **Findings batch.** The walk's output — the "user feedback batch"
+   produced internally. Rows: severity, **class**
+   (`defect` | `absence` | `quality` | `hygiene` | `aesthetic-floor`
+   — the class column is how a round that never surfaces quality
+   observations on a UI subject becomes visible; `aesthetic-floor` is
+   v3/D8: sub-bar-by-class — the surface reads generic, clip-art,
+   mean-register, or void-island *as a class*, evidenced by a
+   distance-to-referent gap or a below-bar-floor verdict, not by a
+   broken element. It exists because the vocabulary that names
+   collisions and dead pixels could not name "boring"), finding, evidence, disposition —
+   `CARRIED` (fixed this round), `NOT-A-DEFECT: <why>`
+   (v2: a bare `NOT-A-DEFECT:` is **not clean-compatible** — it counts
+   as work requiring a defense; the clean-compatible form is
+   `NOT-A-DEFECT — DEFENDED: <why it isn't a defect + what confirmed
+   it>`, and `major`/`critical` rows always need `DEFENDED:` plus an
+   independent cite — eyes/verify:/shot — self-adjudicated majors are
+   the wave-away the column exists to refuse),
+   `FILED: <tracker> — <why out-of-scope>` (in-scope findings are worked,
+   not filed — filing everything is the escape hatch the gate scans for),
+   `ACCEPTED:` (a real user verb recorded this session — there is no
+   self-acceptance inside a loop; a genuine product decision is
+   `STOP: USER-GATE`, which ends the turn, not quietly the loop),
+   `BLOCKED: <wall>`, `OPEN` (non-terminal — holds the stop).
+   `CLEARED:`/`AXIS-NA:` are traversal-row verdicts, not finding
+   dispositions. This batch uses the doc-class set — `FIXED`/
+   `VERIFIED` belong to surface findings (`09-design-review.mdc`);
+   the canonical vocabulary is `15-analysis-depth.mdc` item 15. Stranger findings the round rebuts or NOT-A-DEFECTs
+   also land in the round's `## Defended` block (eyes protocol →
+   defended findings carry over).
+
+   **Mechanism before instance.** Every critical/high + every quality/
+   absence row carries a `mechanism` cell — the strategy-level cause
+   ("payload media is illustration", "one-accent budget → monochrome"),
+   not the instance. Findings sharing a mechanism take ONE mechanism-
+   level disposition ("replan the media strategy"), never N instance
+   patches. `CARRIED` on a mechanism-cell row must name the strategy
+   change; "fixed the tile the finding cited" is the F3 failure —
+   schema-complete, mechanism untouched.
+   **Biggest levers are load-bearing.** Every `biggest lever` cell in
+   the eyes artifact's `## Verdicts` must appear in this round's
+   dispositions — applied with evidence or defended with a reason.
+   Sixteen micro-fixes while the named lever stands is the round the
+   user watches and calls 15%.
+   **Fix-effect verification.** `CARRIED` on critical/quality rows
+   cites the re-verification — a post-fix capture region or an eyes
+   re-read — not the author's "done." The fix is verified the way the
+   finding was found.
+   **Priority inversion is a flag.** A round may not close with OPEN
+   critical/quality findings while defect-class fixes landed — defect
+   work while the ceiling sits is the inversion the rule names.
+   **The ambition round.** At scope=product, at least one round's
+   `### Analysis plan` opens from the levers and scores — "what raises
+   the ceiling" — not only findings disposition. The pass that makes it
+   remarkable is a named round, not an accident. v3 (D2): the ceiling
+   question is graded by a NON-PRODUCER — the round's eyes artifact
+   answers "what would a top-5% version have that this lacks", never
+   the builder. A producer self-grading its own direction's ceiling
+   is the documented failure: the ambition round that answered
+   "already-present moves carry the ceiling" with zero code changes
+   and a clean-walk terminator.
+   **Per-surface floor at product scope.** L6 absence, L9 register,
+   and L14 embarrassment rows name each in-scope surface or carry
+   `DECLARED: <surface> — <why>` — one surface's walk is not the
+   product's walk.
+   **L13 carries the numbers.** Delta rows cite the eyes `## Scores`
+   movement (surface: prev→now) plus before/after capture pairs for
+   changed regions — "things moved" needs a number and a picture pair.
+4. **Restart the standard process.** The batch becomes the next
+   iteration's work — todo list, spec revision, implementation,
+   verification — then round N+1's analysis. The loop never pauses for
+   the user inside a round. Findings about the machinery itself (L12) may
+   patch the instrument — a rule/gate edit mid-loop gets a
+   `DECLARED: instrument-change` row naming what changed and why, and
+   instrument edits don't count as `Applied` for finding closure.
+
+## Exit review — the verdict pass, required before ANY terminator
+
+Traversal asks "did we look everywhere"; the Exit review asks "is what we
+built actually good" — a separate instrument, and no terminator is legal
+without it (the user's standing rule: quality is meticulously analyzed
+before a result may finish without another iteration).
+
+- One row per major unit of the result:
+  `| <unit> | strong | adequate | weak | unverified | <evidence> |` —
+  floor: ≥1 row per unit, minimum 2 for scope > fix, 1 for fix.
+- **`weak` blocks termination** unless the row carries `— ACCEPTED:` and
+  the user actually agreed this session. **`unverified` always blocks** —
+  unverifiable means the loop isn't done; run the verification and
+  re-verdict (that is another round).
+- `Weakest area:` names the weakest part even when the verdict is strong —
+  a review that finds nothing wrong with anything wasn't looking.
+- `Re-verified:` lists what was re-examined on the finished result after
+  the last change — the verdict reviews the shipped state, not a mid-state.
+- There is **no `DECLARED:` path** — verdict rows are always required.
+- **External-evidence floor (v2, rendered subjects):** at least one
+  verdict row's evidence is external — the eyes artifact, a shot, a
+  probe — not only the author's own judgment. An exit review whose every
+  verdict is self-verdicted is the author grading its own paper.
+- **Rendered-eyes precondition (v2, rendered subjects):** the loop
+  cannot terminate until a stranger has graded the pixels — the record
+  must cite a rendered-eyes artifact that exists on disk
+  (`.unlazy/eyes/<…render|stranger|first-render|<sid>-rN…>.md`).
+  A spec-text eyes pass does not satisfy this: the gap it closes is
+  convergence on defect-closure with no verdict on the rendered
+  product at all.
+- The tracker timestamps the section's first appearance; a verdict first
+  observed before the last implementation write fails — it reviewed a
+  mid-state.
+
+## Lanes, batch plans, and rule refresh — cross-session machinery
+
+The failure this section kills: gates and state are session-scoped, but a
+user's "keep going until the findings are done" instruction lives at the
+workspace level. Every turn ended as a decision point — "say the word" —
+and each resumed batch ran with no fresh plan because nothing mechanical
+could see the lane. Three contracts close it:
+
+- **`Lane:` — the standing-work declaration.** A ledger doc (analysis,
+  audit-ledger, Active Work doc) declares itself a lane with a line
+  `Lane: standing — <the user's standing instruction, quoted or
+  summarized>` or continues to declare via `Drive:`/`Driver:`. Any such
+  doc carrying non-terminal findings rows is a **standing lane**.
+  `rejection-tracker.mjs` scans the ledger directories **on every
+  prompt** — the reminder is the point; a lane that stops being visible
+  mid-session is how the machinery gets forgotten. The injection carries
+  the full cycle protocol as an ordered checklist (RE-FRESH → analyze →
+  BATCH-PLAN + BATCH-VERIFY → comprehensive todos → edit → record), so a
+  session that never read this file still receives its obligations. A
+  lane with open rows records `resume_lanes` in gate-state — the lane's
+  open rows are the session's standing assignment (14-stop-integrity →
+  auto-resume), no user "continue" needed. A doc with open rows and no
+  lane declaration surfaces as `UNDECLARED-LEDGER:` — declaring is how
+  work becomes resumable; `Lane: none` or `Ledger: closed — <why>` is
+  the explicit opt-out.
+- **`BATCH-ANALYSIS:` + `BATCH-PLAN:` + `BATCH-VERIFY:` + covering
+  todos — analyze and plan before the first edit of a resumed batch.**
+  A lane-armed session's first implementation write of each batch
+  requires ALL FOUR: `BATCH-ANALYSIS:` rows giving a per-item verdict
+  (feasible / blocked / approach — the analysis artifact, one line per
+  planned finding, **citing evidence**: a `file:line`, a backticked
+  code object, or a named route/field/serializer — an uncited verdict
+  is not analysis); a NEW `BATCH-PLAN: <finding ids or items>` row
+  naming what the batch commits to; a NEW `BATCH-VERIFY: <checks>` row
+  naming how the batch will be verified; and a fresh comprehensive
+  `todo_write` list (≥3 items spanning ≥2 of the analyze/plan,
+  implement, and verify/record stages). **Parity binds them:** every
+  finding-id the plan names must appear in a new `BATCH-ANALYSIS` line
+  (you analyzed what you committed to) AND in ≥1 todo item (the list
+  covers the plan — a list beside the plan is not a plan).
+  `check-cycle-plan.mjs` (PreToolUse) blocks the edit otherwise and
+  **re-arms at every batch boundary** — when the lane's open-row count
+  drops, the next batch needs its own new quartet; the stop-gate
+  `CYCLE-PLAN` check is the backstop (`EXEMPT-CYCLEPLAN:` escapes).
+  Ledger and `.unlazy/` paths are exempt from the block — writing the
+  plan is the remediation. A bare `BATCH-PLAN:` stamp with no named
+  items, an analysis row naming nothing planned, or a stale todo list
+  carried from the previous batch, is the costume, not the plan.
+- **`RE-FRESH:` — rules re-read per cycle.** Every `## Round N` (N ≥ 2)
+  and every resumed batch opens by re-reading the rules in force
+  (00-operating, 10-rule-enforcement, 14-stop-integrity,
+  15-analysis-depth, this file, plus the file-scoped rules the unit
+  touches) and stamping `RE-FRESH: re-read <the list>` inside the
+  round/batch record. Context injection degrades under token pressure;
+  the stamp makes the refresh an auditable act rather than a memory
+  assumption.
+
+## Termination — four legal ends
+
+- `ENDED: clean-walk` — convergence is **two clean walks** for scope > fix
+  (rounds ≥ min(2, budget)), each with every axis walked (not NA'd away)
+  and evidence — a single lucky traversal doesn't establish the tail is
+  clean. A finding is *actionable* when fixing it sits inside the
+  iteration's scope and needs no product decision. v2: a walk carrying
+  undefended `NOT-A-DEFECT:` rows is **not clean** — waving findings away
+  without a `DEFENDED:` defense is adjudication, not cleanliness; the
+  wave-away path to convergence is closed.
+- `ENDED: budget-met` — M ≥ N and the last walk's findings all terminal.
+- `ENDED: fix-scope` — `Scope: fix` only: the declaration plus standard
+  §2c verification — still owes the Exit review.
+- `ENDED: redirected — <user's words>` — the user changed the task
+  mid-loop; the target text is required, not optional.
+
+A turn may not end with any findings row `OPEN`, and a terminated loop's
+final `### Applied` reads `none — final` — changes listed there were never
+traversed. The terminator is also fresh-checked two ways: implementation
+writes that postdate the artifact stale its `ENDED:`, and rounds must be
+**interleaved with implementation** — the tracker timestamps each
+`## Round N`'s first appearance and the gate requires an impl write
+between consecutive post-baseline rounds. Rounds burst-authored at the
+end (all first-seen at once, no impl between them) are the backfill
+signature — write the artifact as rounds happen, never at wrap-up.
+Rounds present before the machinery's first observation are the declared
+legacy baseline — and the baseline is honored only for **grandfathered
+sessions** (state files that predate the temporal machinery, marked
+`loop_grandfathered` by `session-tracker.mjs`; files born under it carry
+`epoch: 2`). An epoch session whose first artifact observation contains
+every round still fails interleave — a burst is backfill, not legacy.
+
+Deliberate limits, stated not hidden: a **grandfathered** session could
+still end-write an artifact and claim baseline — mechanically
+indistinguishable from a genuinely pre-machinery artifact. The bound is
+the transition population itself (pre-machinery state files age out);
+the cover is auditability (`round_seen`/`impl_log`/`baseline_rounds`
+sit plain in `.unlazy/gate-state/<sid>.json`). `RE-CHECK:` and
+`DECLARED:` cells are attestation — the gate verifies they were
+declared, not that the re-run happened; same ceiling as content-truth.
+
+## What this does not replace — and cannot mechanize
+
+The round traversal is *in addition to* the §2c stage reviews, the
+design-review artifact, and the verification suite — those verify the
+implementation; the loop interrogates the result the way the user would.
+And the gate mechanizes **coverage, not verdict quality**: a traversal row
+that says "looks fine" with a shot cited is schema-valid whether or not
+the judgment was good. The quality axes (L2/L4/L9) are where the user's
+catches concentrated; the gate can force the walk, not the eye. v2 narrows
+the residual: the quality axes now ride on the stranger's verdicts rather
+than the author's, the eyes pass runs a two-phase comprehensive protocol
+with a deposited brief, defended findings carry over to the next stranger,
+and the class column makes a quality-free UI round visible. What no gate
+can force is the eye itself — a stranger can still return shallow
+verdicts. That residual is covered by the enumerated artifact (coverage +
+verdicts + brief deposited = shallow leaves fingerprints), the design-
+review verdict machinery, and the user's own verdict — stated plainly
+rather than claimed closed, same doctrine as `10-rule-enforcement`'s
+deliberate limits.

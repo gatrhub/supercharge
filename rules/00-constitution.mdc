@@ -1,0 +1,88 @@
+---
+description: Constitution — the always-on contracts every session carries. Distilled from the corpus; domain detail lives in the trigger-load map below.
+alwaysApply: true
+---
+
+# Constitution — the contracts that always bind
+
+This file is the distilled core. Every rule file remains authoritative
+for its domain — when the trigger map below says a file loads, its full
+text binds, not this summary. When a summary and a detail file ever
+disagree, **the detail file wins**.
+
+## Operating contract (00-operating)
+
+- Rules are conditions, not suggestions. Start every session per the
+  briefing skill: read the rules, load the named skills.
+- **No deferral.** Every work item exits exactly one of: DONE with
+  evidence · `BLOCKED: <real external wall — credential/service/person,
+  never effort or later>` · `ACCEPTED: <the user's own words>`. Open
+  work hidden behind "residual / known issue / for later / out of
+  scope" is the failure the stop gate exists to catch.
+- Every completed todo or plan item gets a written `CLOSURE: <stem> —
+  <what was questioned + ≥2 axes or a cite>` before the next begins.
+- `rules/`, `.devin/scripts/`, `.devin/hooks.v1.json`,
+  `AGENTS.md`, and skill files are read-only unless the user asks for
+  that specific change.
+- The user runs servers, migrations-adjacent processes, and installs —
+  the agent runs migrations itself; never ask the user to run them.
+
+## Evidence + claim contract (12-verification)
+
+- DONE = observed world matches claimed world: symptom absent,
+  expected state present with its external reference, blast-radius
+  checked, claim scope ⊆ verified scope.
+- CANDIDATE = code shipped + mechanistic verification only; never
+  reported as fixed. Fix-verbs may not describe it.
+- User-reported defect rejected → next action is reproduction, not
+  another theory. `CANNOT-REPRO: <what you asked for>` is legal.
+- `git diff` your own edits before blaming the environment.
+
+## Security + performance invariants (05)
+
+- Two authz planes: `staff authz plane` staff / `app authz (tenant plane)` group —
+  never mix; unknown catalog key denies; fail closed; `group_id` on
+  every resource load (IDOR); CSRF + Origin on cookie mutations; WS
+  auth from the session cookie, never query-string tokens.
+- No blocking I/O on the request path; tenant-scoped queries always filter
+  the tenant key; cursor pagination; no N+1; no unbounded lists;
+  fast serialization on request paths; multi-worker state through the
+  shared-state helper, not module locals.
+- Model change ⇒ a migration in the same slice, run by the agent.
+
+## Analysis + report contract (15/16/11/14)
+
+- Analysis asks are projects: declare the universe, walk all of it,
+  hypothesis log (`found:`/`cleared:`/`unverifiable:`), constraint
+  check before reporting. Items 25–29: quantifier asks get ask-side
+  mechanical enumeration; units are elements × aspects; named
+  analysis kinds get named passes; breadth asks carry volume floors;
+  embedded plans get one row per finding.
+- Implementations loop: analysis plan → traversal → findings →
+  applied → re-verify, with the iteration record at `.unlazy/`.
+- Reports are plain English with precise cites — a verdict the reader
+  can't verify is a claim, not evidence.
+
+## Trigger-load map — which file owns which domain
+
+These files are trigger-loaded, not always-on. When the trigger
+matches, read the file — it binds in full.
+
+| trigger | file |
+|---|---|
+| Any UI/UX work — design, build, review, fix | `13-design-spec.mdc` then `09-design-review.mdc` + `ui-modularity.mdc` |
+| Touching permissions, adapters, privileged-view | `security-authz.mdc` |
+| Backend work under `app/` | `modularity-backend.mdc`, `performance.mdc` |
+| Launching subagents / acting on their reports | `02-subagent-ceiling.mdc`, `06-subagent-gatecheck.mdc` |
+| The user asks for an audit | `03-periodic-audits.mdc` |
+| Living docs / product-port work | `04-rewrite-docs.mdc`, `07-product-transfer.mdc` |
+| Running or debugging the server | `running-the-server.mdc` |
+| Readability/refactor judgment | `08-code-quality.mdc` |
+
+## The machinery that enforces this
+
+`.devin/hooks.v1.json` + `.devin/scripts/stop-gate.mjs` arm ~75 checks
+(session tracker, stop gate, item closure, cycle plan, deferral scan).
+Their map lives in `10-rule-enforcement.mdc` (trigger-loaded — read it
+when a check fires and you need the exact contract). The gate verifies
+shape; the user grades depth.
