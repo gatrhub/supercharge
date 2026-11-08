@@ -618,6 +618,8 @@ function main() {
     console.error(
       `[stop-gate] note: TRANSCRIPT-ABSENT: state file exists but no transcript loaded — ` +
       `corroboration checks (ran-commands, user-verb signals, reconstruction) run degraded this stop; ` +
+      `message-dependent checks (PUSHBACK, FIRST-ANSWER, USER-GATE substance, ANALYSIS-EVIDENCE floor, ` +
+      `verdict-scan) see zero assistant messages without last_assistant_message in the input; ` +
       `their outcomes are asserted, not proven.`
     );
   }
@@ -1108,6 +1110,16 @@ function main() {
   const DERIVED_RE = /`[^`]+`|\b(?:grep|rg|search(?:ed|ing)?|glob|find(?:str)?)\b|(?:app|src|docs|legacy|rules|skills|\.devin|\.unlazy|\.claude|\.agents)[\\/]/i;
 
   const failures = [];
+  // R-STOP4: an armed session checked with no message input produced a
+  // false green — manual bare-stdin runs silently skipped every
+  // message-dependent check. The green is now declared conditional.
+  if (state && !assistantTexts.length) {
+    failures.push(
+      `UNVERIFIED: message-dependent checks (PUSHBACK, FIRST-ANSWER, USER-GATE substance, ANALYSIS-EVIDENCE floor, ` +
+      `verdict-scan) ran with zero assistant messages — hook input carried no transcript_path and no ` +
+      `last_assistant_message; a green from this input is conditional, not proven`
+    );
+  }
   if (stateAnomalies.length) {
     failures.push(
       `GATE-STATE: ${stateAnomalies.length} state field(s) had unexpected types (${stateAnomalies.slice(0, 3).join("; ")}) — coerced to empty; a malformed state record is tampering or corruption, and the fields it carried can't vouch for anything`
@@ -3317,6 +3329,7 @@ function main() {
   const drivenOpen = [];
   const drivenDocs = [];
   let driveDeclared = false;
+  let driveContinuousSession = false;
   // Use-vs-mention: a doc discussing the vocabulary — "`QUEUED:` is not
   // a state" — is not deferring. Inline-code spans are stripped before
   // the scans so mentions inside backticks don't fire; a real deferral
@@ -4057,10 +4070,15 @@ function main() {
       const otherDriverExists = driverMatch && driverMatch[1] !== sid && foreignDriverState(driverMatch[1]);
       const owesDrive = !driverMatch || driverMatch[1] === sid || !otherDriverExists;
       if (owesDrive) {
+        // R-STOP3: open ledger shapes count, not only the QUEUED token —
+        // `- [ ]` checkboxes and OPEN:/PENDING:/TODO: markers are open work
+        // too; a continuous doc whose rows carried no marker vocabulary
+        // bound nothing before this widened scan.
         const queuedLines = docText
           .split(/\r?\n/)
           .map(stripSpans)
-          .filter((l) => /\bQUEUED\b/i.test(l) && !/\b(BLOCKED|ACCEPTED|DONE|LANDED)\b/i.test(l));
+          .filter((l) => (/\bQUEUED\b/i.test(l) || /^\s*[-*]\s*\[\s\]\s+\S/.test(l) || /\b(?:OPEN|PENDING|TODO)\s*:/.test(l)) &&
+            !/\b(BLOCKED|ACCEPTED|DONE|LANDED|FIXED|VERIFIED|CLOSED)\b/i.test(l));
         if (queuedLines.length) {
           failures.push(
             `PLAN-DRIVE: ${docPath} is Drive: continuous with ${queuedLines.length} QUEUED row(s) still open — ` +
@@ -4086,6 +4104,7 @@ function main() {
     if (isMine) {
       drivenDocs.push(docPath);
       if (/^\s*drive\s*:\s*(continuous|checkpointed)\b/im.test(docText)) driveDeclared = true;
+      if (/^\s*drive\s*:\s*continuous\b/im.test(docText)) driveContinuousSession = true;
 
       // DONE/LANDED rows are claims that work landed — they owe an
       // inspectable citation, not a summary (14-stop-integrity: no citation
@@ -5132,6 +5151,13 @@ function main() {
       [/\bresiduals?\b|\bremainder\b|\bleft[-\s]?over\b[^.!?\n]{0,25}(?:item|work|task|bit|piece|part)s?\b|\bremaining\b[^.!?\n]{0,20}\b(?:item|work|task|bit|piece)s?\b/i, "residual"],
       [/\bpartial(?:ly)?\b[^.!?\n]{0,25}\b(?:verified|tested|done|covered|complete|reviewed)\b|\b\d+\s*(?:\/|\s+of\s+)\s*\d+\s+(?:pages|items|checks|files|rows|surfaces|sections|steps|units|classes|findings|tests|cases|tabs|rules|docs)\s+(?:were|was|are|is|been|got|fully|now|all)?\s*(?:verified|tested|reviewed|checked|covered|done|read|examined|audited)\b/i, "partial-admission"],
       [/\bcarr(?:y|ied|ies)\b[^.!?\n]{0,25}\b(?:over|forward|into|to\s+the\s+next)\b/i, "carried-forward"],
+      // R-STOP1: roadmap-promise — naming undone work as a forward plan is
+      // standing work in promise costume. Two shapes: next-per-the-plan
+      // phrasing, and ≥2 numbered plan-row ids under plan/remaining vocab.
+      // Deliberately not in PARKING_KINDS — last-message-only (mid-work
+      // "next I will…" narration is honest state, not a deferral).
+      [/\bnext\s+(?:up\b[^.!?\n]{0,30}\b(?:plan|work|todo|row|item|tier|wave|batch)|per\s+the\s+(?:plan|list)|wave\b|tier\b|batch\b)/i, "roadmap-promise"],
+      [/\b(?:next|remaining|left|todo|plan|row|item)s?\b[^.!?\n]{0,40}\b\d+\.\d+\b[^.!?\n]{0,80}\b\d+\.\d+\b/i, "roadmap-promise"],
     ];
     const IMPOSSIBLE_MODAL = /\bcan'?t\b|\bcannot\b|\bcouldn'?t\b|\bcould\s+not\b|\bunable\s+to\b|\bno\s+way\s+to\b|\bnot\s+able\s+to\b|\bimpossible\b|\bno\s+(?:live|running|authed|working|way)\b|\bneeds?\s+(?:a|an|the)?\s*(?:live|running|authed|staff)/i;
     // Discharge grammar (in gate-evidence):
@@ -5432,6 +5458,24 @@ function main() {
         const am = status.match(/^ACCEPTED\s*:\s*(.+)$/i);
         if (bm) {
           const wall = bm[1];
+          // R-STOP2: self-limit walls — capacity claims in wall costume.
+          // The capability cross-check below knows fake-capability walls
+          // ("needs a live server" while a minter exists); this is the
+          // twin for the class the constitution names first (never
+          // effort): turn/session/context/time/token self-limits are
+          // never walls — the runtime owns halting.
+          const SELF_LIMIT_WALL = /\b(?:turn\s+boundar\w+|turn\s+limit|session\s+(?:end|boundary|limit)|context\s+(?:(?:is|was|be|am|getting|ran|runs|running|now|almost|nearly)\s+)*(?:limit|window|budget|remaining|low|tight|exhaustion|short)|runway|capacity|effort|token\s+(?:limit|budget|count)|time\s+(?:limit|budget|constraint|remaining)|message\s+(?:limit|count)|for\s+later)\b/i;
+          if (SELF_LIMIT_WALL.test(wall)) {
+            corrProblems.push(`BLOCKED row "${item}" names a self-limit wall (turn/session/context/capacity class) — capacity is never a wall; the runtime owns halting (14-stop-integrity: there is deliberately no capacity class)`);
+          }
+          // R-STOP7: under Drive: continuous a BLOCKED wall must name an
+          // external class — a person, credential, service, or upstream —
+          // because sequencing walls ("later", "next wave") are deferral
+          // costumes. The external vocabulary is the legal wall space.
+          const EXTERNAL_WALL = /\b(?:user|person|owner|author|reviewer|credential|password|api[\s-]?key|service|server\s+down|network|permission|access|quota|rate[\s-]?limit|dependency|upstream|external|review|approv\w+|sign[\s-]?off|decision\s+only|waits?\s+on|asked|request)/i;
+          if ((driveContinuousSession || /^\s*DRIVE\s*:\s*continuous\b/im.test(evidence)) && !EXTERNAL_WALL.test(wall)) {
+            corrProblems.push(`BLOCKED row "${item}" under Drive: continuous doesn't name an external wall (person/service/credential/upstream) — sequencing walls are deferral costumes (14-stop-integrity)`);
+          }
           const cap = CAPABILITIES.find((c) => c.re.test(wall));
           const capPath = cap && cap.paths.find((p) => existsSync(join(ROOT, p)));
           if (capPath && !impossibleDischarged(capPath)) {
@@ -6186,7 +6230,7 @@ function main() {
           if ((uniRows > 8 || findingRows > 0) && !spDecl) {
             if (!spBody) {
               pmissing.push(`a \`## Second pass\` (or \`## Re-verification\`) section — ${findingRows > 0 ? `${findingRows} finding(s)` : `${uniRows} universe rows`} owe a re-verification pass (each re-examined with new evidence — re-verified/confirmed/cleared — or a DECLARED row; \`DECLARED: second-pass — <why>\` exempts a genuinely single-pass subject)`);
-            } else if (!/\b(re-?verif|re-?examin|confirm\w*|cleared|re-?check|re-?walk|DECLARED)\b/i.test(spBody)) {
+            } else if (!/\b(re-?verif\w*|re-?examin\w*|confirm\w*|clear\w*|re-?check\w*|re-?walk\w*|DECLARED)\b/i.test(spBody)) {
               pmissing.push("`## Second pass` exists but carries no re-examination vocabulary — re-verify with NEW evidence, don't re-cite the first pass");
             }
           }
@@ -8275,6 +8319,16 @@ function main() {
   // `*` abuse matters most) never showed its wildcard list.
   if (wildEscapes.length) {
     console.error(`stop-gate note: wildcard pardons consumed — ${[...new Set(wildEscapes)].map((c) => `EXEMPT-${c}: *`).join(", ")} (each reason ≥40 chars on file in ${evidenceRel}; a wildcard pardons every target, audit it).`);
+    // R-STOP5: ≥5 wildcards in a session is a pardon surface, not a
+    // pardon — each releases every target of its check class. Discharge
+    // with a `WILDCARD-AUDIT:` line (≥40 chars) naming the review.
+    const wildCount = new Set(wildEscapes).size;
+    if (wildCount >= 5 && !/^\s*WILDCARD-AUDIT\s*:\s*.{40,}/im.test(evidence)) {
+      failures.push(
+        `WILDCARD-AUDIT: ${wildCount} wildcard pardons consumed this session — each EXEMPT-*: * released every target of its check class; ` +
+        `audit the lines in ${evidenceRel} and record a \`WILDCARD-AUDIT: <what the review found>\` line, or narrow the pardons to per-target exemptions`
+      );
+    }
   }
 
   if (failures.length) {
